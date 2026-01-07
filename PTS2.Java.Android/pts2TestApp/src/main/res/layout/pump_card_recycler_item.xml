@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <import type="com.technotrade.pts2.pts2testapp.entity.PumpItem" />
+
+        <variable
+            name="item"
+            type="com.technotrade.pts2.pts2testapp.entity.PumpItem" />
+
+    </data>
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cvPump"
+        android:layout_width="match_parent"
+        android:layout_height="206dp"
+        android:transitionName="cvPumpTransition"
+        card_view:cardCornerRadius="10dp"
+        card_view:cardElevation="@dimen/cardview_default_elevation"
+        card_view:cardMaxElevation="@dimen/cardview_default_elevation"
+        card_view:cardUseCompatPadding="true"
+        card_view:cardBackgroundColor="@{item.stateBackgroundColor}">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/selector_button_card_item"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/flow"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <FrameLayout
+                        android:id="@+id/flPump"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tvPumpNumber"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:background="@drawable/sphere"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:shadowColor="@color/black"
+                            android:shadowDx="-4"
+                            android:shadowDy="-4"
+                            android:shadowRadius="4"
+                            android:text="@{String.valueOf(item.number)}"
+                            android:textColor="@color/skyblue"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/pcProgress"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:progress="@{item.progress}"
+                            card_view:indicatorColor="@color/skyblue"
+                            card_view:indicatorSize="55dp"
+                            card_view:trackColor="@color/grey_avg"
+                            card_view:trackThickness="8dp" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvState"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="15dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@{item.stateDescription}"
+                            android:textAlignment="center"
+                            android:textColor="@{item.stateColor}"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:shadowDx="0"
+                            android:shadowDy="0"
+                            android:shadowColor="@color/green_dark"
+                            android:shadowRadius="2" />
+
+                        <TextView
+                            android:id="@+id/tvNozzleCaption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="20dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/nozzle_label_with_colon"
+                            android:textAlignment="textStart"
+                            android:textColor="@color/black"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNozzle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@{item.fuelName != null ? String.valueOf(item.nozzle) + ` - ` + item.fuelName : String.valueOf(item.nozzle)}"
+                            android:textAlignment="center"
+                            android:textColor="@color/black"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvVolumeCaption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="18dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/volume_label_with_colon"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvVolume"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="26dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:volumeWithUnit="@{item.volume}" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvPriceCaption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="18dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/price_label_with_colon"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvPrice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="26dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:priceWithCurrencySymbol="@{item.price}" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvAmountCaption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="18dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/amount_label_with_colon"
+                        android:textColor="@color/black"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="26dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:priceWithCurrencySymbol="@{item.amount}" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+</layout>

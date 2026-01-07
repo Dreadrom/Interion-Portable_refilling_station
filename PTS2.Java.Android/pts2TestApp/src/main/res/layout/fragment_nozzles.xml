@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto">
+
+	<data>
+		<import type="com.technotrade.pts2.pts2testapp.gui.viewmodel.PumpsViewModel" />
+
+		<variable
+			name="viewModel"
+			type="com.technotrade.pts2.pts2testapp.gui.viewmodel.PumpsViewModel" />
+	</data>
+
+	<androidx.constraintlayout.widget.ConstraintLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:background="@drawable/poly_green2">
+
+		<TextView
+			android:id="@+id/tvTitle"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			app:layout_constraintTop_toTopOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintBottom_toTopOf="@id/rvNozzles"
+			android:gravity="center"
+			android:text="@string/select_nozzle"
+			android:textSize="20sp"
+			android:textColor="@color/black"
+			android:textStyle="bold" />
+
+		<androidx.recyclerview.widget.RecyclerView
+			android:id="@+id/rvNozzles"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+			app:layout_constraintTop_toBottomOf="@id/tvTitle"
+			app:layout_constraintBottom_toTopOf="@id/btnNozzleApply"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:adapter="@{viewModel.nozzlesRecyclerViewAdapter}"
+			app:nozzles="@{viewModel.nozzles}"
+			app:selectedNozzle="@={viewModel.twoWayFields.selectedNozzle}" />
+
+		<Button
+			android:id="@+id/btnNozzleApply"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:text="@string/apply"
+			app:layout_constraintBottom_toBottomOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintEnd_toEndOf="parent"
+			android:textColor="@color/white"
+			android:textSize="16sp"
+			android:background="@drawable/selector_button_blue"
+			android:onClick="@{viewModel::onApplyNozzleClicked}" />
+
+	</androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

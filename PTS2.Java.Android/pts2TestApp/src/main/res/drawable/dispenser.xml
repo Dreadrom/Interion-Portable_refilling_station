@@ -1,0 +1,39 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="5081"
+    android:viewportHeight="5081">
+    <group
+        android:pivotX="3050"
+        android:pivotY="2650"
+        android:scaleX="0.6"
+        android:scaleY="0.6">
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M2570,1911l-1701,0c-49,0 -89,-41 -89,-90l0,-1057c0,-49 40,-89 89,-89l1701,0c50,0 90,40 90,89l0,1057c0,49 -40,90 -90,90zM2824,272l-2209,0c-87,0 -158,71 -158,158l0,3798 2525,0 0,-3798c0,-87 -71,-158 -158,-158z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M3179,4821l0,-421c0,-44 -36,-81 -80,-81l-2758,0c-44,0 -81,37 -81,81l0,421 2919,0z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M1809,921h663v188h-663z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M1406,1199h1066v188h-1066z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M2015,1476h457v188h-457z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M3056,2179l339,574l190,1l69,198l-598,0z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M3353,2191l74,-67c12,-11 38,-13 49,-1l92,110c23,28 104,-31 127,-2l65,80 -163,160c-22,21 -73,24 -92,0l-157,-199c-17,-21 -15,-63 5,-81zM3173,1352c-56,-38 -50,-25 -117,-38l0,155c15,8 33,12 45,25 49,49 90,104 135,157 -20,51 -92,110 -60,154l51,68c-17,110 -116,238 -52,328l305,427c38,53 148,66 195,20l149,-149 122,123 204,-205 -316,-357c-27,-30 15,-80 22,-119l-338,-346c-34,-34 -96,-6 -143,-9 -68,-78 -117,-176 -202,-234z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M3103,3163l15,0c26,0 47,21 47,47l0,162c0,26 -21,47 -47,47l-15,0 -47,0 0,-256 47,0z" />
+        <path
+            android:fillColor="#FEFEFE"
+            android:pathData="M3215,3235c346,67 614,351 806,890 42,119 75,265 143,350 68,86 135,155 242,135 107,-20 242,-52 296,-234 53,-182 -39,-431 -121,-737 -83,-305 -307,-704 -535,-1026l87,-88c219,339 453,752 541,1076 87,324 173,657 119,819 -53,162 -139,231 -284,276 -145,44 -299,10 -388,-84 -89,-93 -148,-277 -195,-406 -155,-436 -369,-755 -711,-851l0,-120z" />
+    </group>
+</vector>

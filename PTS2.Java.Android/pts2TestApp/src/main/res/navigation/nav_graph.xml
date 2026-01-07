@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/pumpsFragment">
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.technotrade.pts2.pts2testapp.gui.fragment.SettingsFragment"
+        android:label="@string/settings_fragment_label"
+        tools:layout="@layout/fragment_settings">
+
+        <action
+            android:id="@+id/action_settingsFragment_to_pumpsFragment"
+            app:destination="@id/pumpsFragment"
+            app:popUpTo="@id/pumpsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/extraFragment"
+        android:name="com.technotrade.pts2.pts2testapp.gui.fragment.ExtraFragment"
+        android:label="@string/extra_fragment_label"
+        tools:layout="@layout/fragment_extra" >
+        <action
+            android:id="@+id/action_extraFragment_to_pumpsFragment"
+            app:destination="@id/pumpsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/pumpsFragment"
+        android:name="com.technotrade.pts2.pts2testapp.gui.fragment.PumpsFragment"
+        android:label="@string/pumps_fragment_label"
+        tools:layout="@layout/fragment_pumps">
+
+        <action
+            android:id="@+id/action_pumpsFragment_to_pumpFragment"
+            app:destination="@id/pumpFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/pumpFragment"
+        android:name="com.technotrade.pts2.pts2testapp.gui.fragment.PumpFragment"
+        android:label="@string/pump_fragment_label"
+        tools:layout="@layout/fragment_pump">
+
+        <action
+            android:id="@+id/action_pumpFragment_to_nozzlesFragment"
+            app:destination="@id/nozzlesFragment" />
+        <action
+            android:id="@+id/action_pumpFragment_to_pumpsFragment"
+            app:destination="@id/pumpsFragment"
+            app:popUpTo="@id/pumpsFragment"
+            app:popUpToInclusive="true"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/nozzlesFragment"
+        android:name="com.technotrade.pts2.pts2testapp.gui.fragment.NozzlesFragment"
+        android:label="@string/nozzles_fragment_label"
+        tools:layout="@layout/fragment_nozzles">
+
+        <action
+            android:id="@+id/action_nozzlesFragment_to_pumpFragment"
+            app:destination="@id/pumpFragment"
+            app:popUpTo="@id/pumpFragment"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/fade_out" />
+    </fragment>
+    <action
+        android:id="@+id/action_global_to_settingsFragment"
+        app:destination="@id/settingsFragment"
+        app:popUpTo="@id/pumpsFragment" />
+    <action
+        android:id="@+id/action_global_to_extraFragment"
+        app:destination="@id/extraFragment"
+        app:popUpTo="@id/pumpsFragment" />
+</navigation>
