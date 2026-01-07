@@ -31,6 +31,18 @@
             android:exported="true"
             android:theme="@style/Theme.PTS2TestApp.NoActionBar">
         </activity>
+        <activity
+            android:name=".gui.activity.LoginActivity"
+            android:screenOrientation="portrait"
+            android:exported="true"
+            android:theme="@style/Theme.PTS2TestApp.NoActionBar">
+        </activity>
+        <activity
+            android:name=".gui.activity.HomeActivity"
+            android:screenOrientation="portrait"
+            android:exported="true"
+            android:theme="@style/Theme.PTS2TestApp.NoActionBar">
+        </activity>
     </application>
 
 </manifest>
