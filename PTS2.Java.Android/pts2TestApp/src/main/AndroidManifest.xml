@@ -43,6 +43,12 @@
             android:exported="true"
             android:theme="@style/Theme.PTS2TestApp.NoActionBar">
         </activity>
+        <activity
+            android:name=".gui.activity.CreateAccountActivity"
+            android:screenOrientation="portrait"
+            android:exported="true"
+            android:theme="@style/Theme.PTS2TestApp.NoActionBar">
+        </activity>
     </application>
 
 </manifest>

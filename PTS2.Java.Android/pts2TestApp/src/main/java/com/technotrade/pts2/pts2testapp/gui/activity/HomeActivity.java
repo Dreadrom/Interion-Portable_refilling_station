@@ -25,11 +25,11 @@ public class HomeActivity extends AppCompatActivity {
         // eg: FirebaseUser currentUser = auth.getCurrentUser();
         //        if (currentUser == null) // show error message and return to login
 
-        tvUser = findViewById(R.id.tvUser);
-        tvMoney = findViewById(R.id.tvMoney);
+        tvUser = findViewById(R.id.tvUsername);
+        tvMoney = findViewById(R.id.tvBalance);
         btnProfile = findViewById(R.id.btnProfile);
         btnConnect = findViewById(R.id.btnConnect);
-        btnTopup = findViewById(R.id.btnTopup);
+        btnTopup = findViewById(R.id.btnTopUp);
         btnLogout = findViewById(R.id.btnLogout);
 
         btnProfile.setOnClickListener(v -> {

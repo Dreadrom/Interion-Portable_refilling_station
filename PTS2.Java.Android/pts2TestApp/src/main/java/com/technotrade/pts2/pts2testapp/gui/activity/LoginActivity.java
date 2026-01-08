@@ -6,36 +6,47 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 public class LoginActivity extends AppCompatActivity {
 
+    private TextView tvForgotPassword;
     private EditText etEmail, etPw;
-    private Button btnLogin, btnCreateAccount, btnForgetPw;
+    private Button btnLogin, btnCreateAccount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+//        if (loggedIn != null) {
+//            // go to HOME PAGE
+//            Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
+//            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//            startActivity(intent);
+//            finish();
+//            return;
+//        }
+
         setContentView(R.layout.activity_login);
 
         etEmail = findViewById(R.id.etEmail);
-        etPw = findViewById(R.id.etPw);
-        btnLogin = findViewById(R.id.btnLogin);
-        btnForgetPw = findViewById(R.id.btnForgetPw);
+        etPw = findViewById(R.id.etPassword);
+        btnLogin = findViewById(R.id.btnContinue);
+        tvForgotPassword = findViewById(R.id.tvForgotPassword);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
 
         btnLogin.setOnClickListener(v -> doLogin());
-        btnForgetPw.setOnClickListener(v -> {
+        tvForgotPassword.setOnClickListener(v -> {
             Toast.makeText(this, "Sending to forgot password page", Toast.LENGTH_SHORT).show();
 //            Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
 //            startActivity(intent);
         });
         btnCreateAccount.setOnClickListener(v -> {
-            Toast.makeText(this, "Sending to create account page", Toast.LENGTH_SHORT).show();
-//            Intent intent = new Intent(LoginActivity.this, CreateAccountActivity.class);
-//            startActivity(intent);
+            Intent intent = new Intent(LoginActivity.this, CreateAccountActivity.class);
+            startActivity(intent);
         });
     }
 

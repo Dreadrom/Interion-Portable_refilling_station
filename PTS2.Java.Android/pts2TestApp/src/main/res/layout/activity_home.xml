@@ -1,89 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="@android:color/white">
 
-    <Button
-        android:id="@+id/btnProfile"
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="148dp"
-        android:layout_marginTop="155dp"
-        android:layout_marginEnd="148dp"
-        android:layout_marginBottom="38dp"
-        android:text="View Profile"
-        app:layout_constraintBottom_toTopOf="@+id/btnConnect"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:text="Interion Portable Refill Station"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <Button
+    <!-- Wallet Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardWallet"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/tvUsername"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/tvBalance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="$501.90"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Subtitle -->
+    <TextView
+        android:id="@+id/tvActionTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="What would you like to do today?"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toBottomOf="@id/cardWallet"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Connect Button -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnConnect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="120dp"
-        android:layout_marginTop="38dp"
-        android:layout_marginEnd="121dp"
-        android:layout_marginBottom="41dp"
-        android:text="Connect To Station"
-        app:layout_constraintBottom_toTopOf="@+id/btnTopup"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:text="Connect to a station"
+        android:textColor="@android:color/black"
+        app:icon="@drawable/connect_logo"
+        app:iconGravity="textStart"
+        app:iconPadding="12dp"
+        app:cornerRadius="12dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@android:color/black"
+        app:layout_constraintTop_toBottomOf="@id/tvActionTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnProfile" />
-
-    <Button
-        android:id="@+id/btnTopup"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="140dp"
-        android:layout_marginTop="22dp"
-        android:layout_marginEnd="141dp"
-        android:layout_marginBottom="127dp"
-        android:text="Top Up Wallet"
-        app:layout_constraintBottom_toTopOf="@+id/btnLogout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnConnect" />
+        app:backgroundTint="@android:color/white"
+        app:iconTint="@null"/>
 
-    <TextView
-        android:id="@+id/tvUser"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="35dp"
-        android:layout_marginTop="41dp"
-        android:layout_marginEnd="222dp"
-        android:layout_marginBottom="671dp"
-        android:text="Username"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/tvMoney"
+    <!-- Top Up Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnTopUp"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="Top-up your wallet"
+        android:textColor="@android:color/black"
+        app:icon="@drawable/wallet_logo"
+        app:iconGravity="textStart"
+        app:iconPadding="12dp"
+        app:cornerRadius="12dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@android:color/black"
+        app:layout_constraintTop_toBottomOf="@id/btnConnect"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tvMoney"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="41dp"
-        android:layout_marginEnd="50dp"
-        android:layout_marginBottom="671dp"
-        android:text="$1000"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/tvUser"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:backgroundTint="@android:color/white"
+        app:iconTint="@null"/>
 
-    <Button
+    <!-- Profile Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnProfile"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="View/ Edit profile"
+        android:textColor="@android:color/black"
+        app:icon="@drawable/profile_logo"
+        app:iconGravity="textStart"
+        app:iconPadding="12dp"
+        app:cornerRadius="12dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@android:color/black"
+        app:layout_constraintTop_toBottomOf="@id/btnTopUp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:backgroundTint="@android:color/white"
+        app:iconTint="@null"/>
+
+    <!-- Logout Button -->
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnLogout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="164dp"
-        android:layout_marginEnd="159dp"
-        android:layout_marginBottom="139dp"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
         android:text="Logout"
+        android:textColor="@android:color/black"
+        app:icon="@drawable/home_logo"
+        app:iconGravity="textStart"
+        app:iconPadding="12dp"
+        app:cornerRadius="12dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="@android:color/black"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnTopup" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:backgroundTint="@android:color/white"
+        app:iconTint="@null"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
