@@ -1,7 +1,45 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { globalStyles } from '../styles/globalStyles';
+
+import { useRef } from 'react';
+import { Connect } from './test_home';
 
 export default function HomeScreen() {
+
+  const connectRef = useRef<Connect | null>(null);
+
+  if (!connectRef.current) {
+    connectRef.current = new Connect();
+  }
+
+  const onConnectPressed = () => {
+    console.log('[Connect]] Connect clicked');
+    connectRef.current?.onConnectClicked();
+    router.push('/connected-screen'); // navigate to debug page
+  };
+  
+  const onGetControllerTypePressed = async () => {
+    console.log('[GetControllerType] Button clicked');
+
+    if (!connectRef.current) return;
+
+    try {
+      // Assume your Connect class has a method to send raw requests
+      const response = await connectRef.current.getControllerType();
+
+      // Example: Alert the controller type
+      const controllerType = response.Packets?.[0]?.Data?.Type ?? 'Unknown';
+      Alert.alert('Controller Type', controllerType);
+
+      console.log('[GetControllerType] Response:', response);
+    } catch (error) {
+      console.error('[GetControllerType] Error:', error);
+      Alert.alert('Error', (error as Error).message);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Interion Portable Refill Station</Text>
@@ -11,18 +49,29 @@ export default function HomeScreen() {
         <Text style={styles.balance}>$501.90</Text>
       </View>
 
-      <Text style={styles.question}>What would you like to do today?</Text>
+      <Text style={globalStyles.subtitle}>What would you like to do today?</Text>
 
-      <TouchableOpacity style={styles.actionButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}
+      onPress={onConnectPressed}>
         <Text>Connect to a station</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.actionButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}
+        onPress={onGetControllerTypePressed}>
+        <Text>Get Controller Type</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={globalStyles.secondaryButton}>
         <Text>Top-up your wallet</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.actionButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}>
         <Text>View / Edit profile</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={globalStyles.secondaryButton}
+      onPress={() => router.push('/settings')}>
+        <Text>Settings</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -53,6 +102,9 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     marginBottom: 30,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   username: {
     fontSize: 14,
@@ -63,22 +115,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 5,
   },
-  question: {
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  actionButton: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
   logoutButton: {
     marginTop: 'auto',
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
 });
