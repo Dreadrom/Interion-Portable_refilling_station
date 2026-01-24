@@ -43,6 +43,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "API_BASE_URL": "https://api.example.com",
+      "API_TIMEOUT": "30000",
+      "FIUU_ENV": "sandbox",
+      "APP_ENV": "development",
+      "ENABLE_MOCK_API": "false",
+      "ENABLE_DEBUG_LOGGING": "true",
+      "PAYMENT_POLL_INTERVAL": "2000",
+      "FUELING_POLL_INTERVAL": "1000"
     }
   }
 }
