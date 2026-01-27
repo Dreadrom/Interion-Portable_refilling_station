@@ -19,26 +19,6 @@ export default function HomeScreen() {
     connectRef.current?.onConnectClicked();
     router.push('/connected-screen'); // navigate to debug page
   };
-  
-  const onGetControllerTypePressed = async () => {
-    console.log('[GetControllerType] Button clicked');
-
-    if (!connectRef.current) return;
-
-    try {
-      // Assume your Connect class has a method to send raw requests
-      const response = await connectRef.current.getControllerType();
-
-      // Example: Alert the controller type
-      const controllerType = response.Packets?.[0]?.Data?.Type ?? 'Unknown';
-      Alert.alert('Controller Type', controllerType);
-
-      console.log('[GetControllerType] Response:', response);
-    } catch (error) {
-      console.error('[GetControllerType] Error:', error);
-      Alert.alert('Error', (error as Error).message);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -54,11 +34,6 @@ export default function HomeScreen() {
       <TouchableOpacity style={globalStyles.secondaryButton}
       onPress={onConnectPressed}>
         <Text>Connect to a station</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={globalStyles.secondaryButton}
-        onPress={onGetControllerTypePressed}>
-        <Text>Get Controller Type</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={globalStyles.secondaryButton}>

@@ -51,6 +51,13 @@ export default function ConnectedScreen() {
         <Text style={globalStyles.primaryButtonText}>Get DateTime</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity 
+        style={[globalStyles.primaryButton, { marginTop: 16, backgroundColor: '#10B981' }]} 
+        onPress={() => router.push('./qr-scanner')}
+      >
+        <Text style={globalStyles.primaryButtonText}>Scan Station QR Code</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={[globalStyles.secondaryButton, { marginTop: 30 }]} onPress={() => router.replace('/home')}>
         <Text>Back to Home</Text>
       </TouchableOpacity>
