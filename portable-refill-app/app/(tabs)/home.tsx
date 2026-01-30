@@ -19,26 +19,6 @@ export default function HomeScreen() {
     connectRef.current?.onConnectClicked();
     router.push('/connected-screen'); // navigate to debug page
   };
-  
-  const onGetControllerTypePressed = async () => {
-    console.log('[GetControllerType] Button clicked');
-
-    if (!connectRef.current) return;
-
-    try {
-      // Assume your Connect class has a method to send raw requests
-      const response = await connectRef.current.getControllerType();
-
-      // Example: Alert the controller type
-      const controllerType = response.Packets?.[0]?.Data?.Type ?? 'Unknown';
-      Alert.alert('Controller Type', controllerType);
-
-      console.log('[GetControllerType] Response:', response);
-    } catch (error) {
-      console.error('[GetControllerType] Error:', error);
-      Alert.alert('Error', (error as Error).message);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -57,15 +37,12 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity style={globalStyles.secondaryButton}
-        onPress={onGetControllerTypePressed}>
-        <Text>Get Controller Type</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={globalStyles.secondaryButton}>
+      onPress={() => router.push('./top-up-wallet')}>
         <Text>Top-up your wallet</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={globalStyles.secondaryButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}
+      onPress={() => router.push('./profile')}>
         <Text>View / Edit profile</Text>
       </TouchableOpacity>
 

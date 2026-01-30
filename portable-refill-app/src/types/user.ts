@@ -45,6 +45,7 @@ export interface ResetPasswordRequest {
 export interface UpdateProfileRequest {
   name?: string;
   phone?: string;
+  email?: string;
 }
 
 export interface ChangePasswordRequest {

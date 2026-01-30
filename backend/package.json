@@ -1,0 +1,23 @@
+{
+  "name": "portable-refill-backend",
+  "version": "1.0.0",
+  "description": "AWS Lambda backend for Portable Refill Station - Auth Handler",
+  "main": "dist/handlers/AuthHandler.js",
+  "scripts": {
+    "build": "tsc",
+    "zip": "npm run build && cd dist && zip -r ../AuthHandler.zip .",
+    "deploy": "npm run zip && aws lambda update-function-code --function-name AuthHandler --zip-file fileb://AuthHandler.zip"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
