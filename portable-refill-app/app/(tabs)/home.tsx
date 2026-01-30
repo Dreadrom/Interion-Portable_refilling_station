@@ -36,11 +36,13 @@ export default function HomeScreen() {
         <Text>Connect to a station</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={globalStyles.secondaryButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}
+      onPress={() => router.push('./top-up-wallet')}>
         <Text>Top-up your wallet</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={globalStyles.secondaryButton}>
+      <TouchableOpacity style={globalStyles.secondaryButton}
+      onPress={() => router.push('./profile')}>
         <Text>View / Edit profile</Text>
       </TouchableOpacity>
 

@@ -63,8 +63,107 @@ export default function StationInfoScreen() {
       return;
     }
 
-    const message = `Product: ${selectedProduct}\n${refillType === 'volume' ? 'Volume' : 'Amount'}: ${refillValue} ${refillType === 'volume' ? 'L' : station?.pricing?.[0]?.currency || 'MYR'}`;
-    Alert.alert('Start Refill', message + '\n\nRefill functionality coming soon!');
+    const value = parseFloat(refillValue);
+    const price = getSelectedPrice();
+    
+    if (!price) {
+      Alert.alert('Error', 'Product pricing not available');
+      return;
+    }
+
+    // Calculate volume and amount
+    const requestedVolume = refillType === 'volume' ? value : value / price.unitPrice;
+    const requestedAmount = refillType === 'amount' ? value : value * price.unitPrice;
+
+    // Minimum limits
+    const MIN_VOLUME = 1; // 1 liter minimum
+    const MIN_AMOUNT = 5; // 5 MYR minimum
+    
+    if (requestedVolume < MIN_VOLUME) {
+      Alert.alert(
+        'Amount Too Low',
+        `Minimum refill is ${MIN_VOLUME} liters (${price.currency} ${(MIN_VOLUME * price.unitPrice).toFixed(2)})`
+      );
+      return;
+    }
+
+    if (requestedAmount < MIN_AMOUNT) {
+      Alert.alert(
+        'Amount Too Low',
+        `Minimum refill amount is ${price.currency} ${MIN_AMOUNT.toFixed(2)} (${(MIN_AMOUNT / price.unitPrice).toFixed(2)} liters)`
+      );
+      return;
+    }
+
+    // Maximum limits from station config
+    const maxVolume = station?.config?.maxDispenseVolume || 100; // Default 100L
+    const maxAmount = station?.config?.maxDispenseAmount || 500; // Default 500 MYR
+
+    if (requestedVolume > maxVolume) {
+      Alert.alert(
+        'Amount Too High',
+        `Maximum refill is ${maxVolume} liters per transaction (${price.currency} ${(maxVolume * price.unitPrice).toFixed(2)})`
+      );
+      return;
+    }
+
+    if (requestedAmount > maxAmount) {
+      Alert.alert(
+        'Amount Too High',
+        `Maximum refill amount is ${price.currency} ${maxAmount.toFixed(2)} per transaction (${(maxAmount / price.unitPrice).toFixed(2)} liters)`
+      );
+      return;
+    }
+
+    // Check tank availability
+    const selectedTank = station?.tankStatus?.find(t => t.product === selectedProduct);
+    
+    if (!selectedTank) {
+      Alert.alert('Error', 'Tank information not available for selected product');
+      return;
+    }
+
+    if (selectedTank.levelLitres < requestedVolume) {
+      Alert.alert(
+        'Insufficient Fuel',
+        `The station only has ${selectedTank.levelLitres.toFixed(2)} liters of ${selectedProduct} available.\n\nPlease reduce your refill amount or choose a different station.`
+      );
+      return;
+    }
+
+    // Warning for low tank levels (< 20% after refill)
+    const remainingAfterRefill = selectedTank.levelLitres - requestedVolume;
+    const percentageRemaining = (remainingAfterRefill / selectedTank.capacityLitres) * 100;
+    
+    if (percentageRemaining < 20 && percentageRemaining >= 0) {
+      Alert.alert(
+        'Low Tank Warning',
+        `This refill will leave the tank at ${percentageRemaining.toFixed(0)}% capacity. The station may run out of ${selectedProduct} soon.\n\nDo you want to proceed?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Proceed',
+            onPress: () => proceedToPreAuth()
+          }
+        ]
+      );
+      return;
+    }
+
+    // All validations passed
+    proceedToPreAuth();
+  };
+
+  const proceedToPreAuth = () => {
+    router.push({
+      pathname: './pre-authorization',
+      params: {
+        stationId: params.stationId,
+        product: selectedProduct,
+        refillType: refillType,
+        refillValue: refillValue,
+      },
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -140,40 +239,71 @@ export default function StationInfoScreen() {
       {station.pricing && station.pricing.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>⛽ Select Product</Text>
-          {station.pricing.map((price: Pricing) => (
-            <TouchableOpacity
-              key={price.id}
-              style={[
-                styles.productCard,
-                selectedProduct === price.product && styles.productCardSelected,
-              ]}
-              onPress={() => setSelectedProduct(price.product)}
-            >
-              <View style={styles.productCardContent}>
-                <Text style={[
-                  styles.productName,
-                  selectedProduct === price.product && styles.productNameSelected,
-                ]}>
-                  {price.product}
-                </Text>
-                <Text style={[
-                  styles.productPrice,
-                  selectedProduct === price.product && styles.productPriceSelected,
-                ]}>
-                  {price.currency} {price.unitPrice.toFixed(2)}/L
-                </Text>
-              </View>
-              {selectedProduct === price.product && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </TouchableOpacity>
-          ))}
+          {station.pricing.map((price: Pricing) => {
+            const tank = station.tankStatus?.find(t => t.product === price.product);
+            const isAvailable = tank && tank.levelLitres > 0;
+            const isLowLevel = tank && tank.lowLevelAlarm;
+            
+            return (
+              <TouchableOpacity
+                key={price.id}
+                style={[
+                  styles.productCard,
+                  selectedProduct === price.product && styles.productCardSelected,
+                  !isAvailable && styles.productCardDisabled,
+                ]}
+                onPress={() => isAvailable && setSelectedProduct(price.product)}
+                disabled={!isAvailable}
+              >
+                <View style={styles.productCardContent}>
+                  <View>
+                    <Text style={[
+                      styles.productName,
+                      selectedProduct === price.product && styles.productNameSelected,
+                      !isAvailable && styles.productNameDisabled,
+                    ]}>
+                      {price.product}
+                    </Text>
+                    {tank && (
+                      <Text style={[
+                        styles.productAvailability,
+                        isLowLevel && styles.productAvailabilityLow,
+                        !isAvailable && styles.productAvailabilityEmpty,
+                      ]}>
+                        {tank.levelLitres > 0 
+                          ? `${tank.levelLitres.toLocaleString()}L available`
+                          : 'Out of stock'}
+                        {isLowLevel && tank.levelLitres > 0 && ' ⚠️'}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.productPrice,
+                    selectedProduct === price.product && styles.productPriceSelected,
+                    !isAvailable && styles.productPriceDisabled,
+                  ]}>
+                    {price.currency} {price.unitPrice.toFixed(2)}/L
+                  </Text>
+                </View>
+                {selectedProduct === price.product && isAvailable && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
 
       {selectedProduct && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💧 Refill Amount</Text>
+          
+          {/* Show limits info */}
+          <View style={styles.limitsInfo}>
+            <Text style={styles.limitsText}>
+              Min: 1L • Max: {station.config?.maxDispenseVolume || 100}L per transaction
+            </Text>
+          </View>
           
           <View style={styles.refillTypeContainer}>
             <TouchableOpacity
@@ -291,6 +421,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   sectionTitle: {
     fontSize: 18,
@@ -322,6 +455,11 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
     backgroundColor: '#F0FDF4',
   },
+  productCardDisabled: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    opacity: 0.6,
+  },
   productCardContent: {
     flex: 1,
     flexDirection: 'row',
@@ -336,6 +474,20 @@ const styles = StyleSheet.create({
   productNameSelected: {
     color: '#10B981',
   },
+  productNameDisabled: {
+    color: '#9CA3AF',
+  },
+  productAvailability: {
+    fontSize: 13,
+    color: '#10B981',
+    marginTop: 4,
+  },
+  productAvailabilityLow: {
+    color: '#F59E0B',
+  },
+  productAvailabilityEmpty: {
+    color: '#EF4444',
+  },
   productPrice: {
     fontSize: 16,
     fontWeight: '600',
@@ -344,11 +496,25 @@ const styles = StyleSheet.create({
   productPriceSelected: {
     color: '#10B981',
   },
+  productPriceDisabled: {
+    color: '#9CA3AF',
+  },
   checkmark: {
     fontSize: 24,
     color: '#10B981',
     marginLeft: 12,
     fontWeight: 'bold',
+  },
+  limitsInfo: {
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  limitsText: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   refillTypeContainer: {
     flexDirection: 'row',
@@ -409,6 +575,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 12,
     alignItems: 'center',
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingText: {
     marginTop: 12,
