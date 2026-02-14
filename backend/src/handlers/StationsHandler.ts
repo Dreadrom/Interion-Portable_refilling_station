@@ -73,7 +73,7 @@ class PTSController {
         throw new Error(`PTS request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       console.log('[PTS] Received response:', JSON.stringify(data));
 
       // Check for errors in response
@@ -392,7 +392,7 @@ export async function handler(
     }
 
     // Protected endpoints (require auth)
-    const token = extractToken(event);
+    const token = extractToken(event.headers?.authorization || event.headers?.Authorization);
     if (!token) {
       return unauthorizedError('Missing authorization token');
     }

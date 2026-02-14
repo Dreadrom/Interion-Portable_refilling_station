@@ -2,7 +2,7 @@
  * JWT Token Utilities
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -18,18 +18,20 @@ export interface TokenPayload {
  * Generate access token
  */
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+  const options: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN as any,
+  };
+  return jwt.sign(payload, JWT_SECRET, options);
 }
 
 /**
  * Generate refresh token
  */
 export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: REFRESH_EXPIRES_IN,
-  });
+  const options: SignOptions = {
+    expiresIn: REFRESH_EXPIRES_IN as any,
+  };
+  return jwt.sign(payload, JWT_SECRET, options);
 }
 
 /**

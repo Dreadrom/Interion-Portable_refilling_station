@@ -9,9 +9,12 @@
     "deploy": "npm run zip && aws lambda update-function-code --function-name AuthHandler --zip-file fileb://AuthHandler.zip"
   },
   "dependencies": {
+    "@types/pg": "^8.16.0",
+    "@types/uuid": "^10.0.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
