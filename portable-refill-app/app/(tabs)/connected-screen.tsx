@@ -2,8 +2,8 @@
 import { router } from 'expo-router';
 import { useRef } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
-import { Connect } from './test_home';
+import { globalStyles } from '../../src/styles/globalStyles';
+import { Connect } from '../../src/services/PTSConnect';
 
 export default function ConnectedScreen() {
   const connectRef = useRef<Connect | null>(null);

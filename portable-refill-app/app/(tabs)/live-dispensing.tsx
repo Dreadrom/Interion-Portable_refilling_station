@@ -10,7 +10,7 @@ import {
   View,
   Animated,
 } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, ProductType } from '../../src/types';
 import { transactionStore } from '../../src/utils/transactionStore';

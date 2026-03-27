@@ -182,10 +182,10 @@ CREATE TRIGGER update_users_updated_at
 
 ### Inbound Rules Required
 
-| Type | Protocol | Port | Source | Description |
-|------|----------|------|--------|-------------|
-| PostgreSQL | TCP | 5432 | 0.0.0.0/0 | Allow from anywhere (testing) |
-| PostgreSQL | TCP | 5432 | Lambda Security Group | Allow from Lambda (production) |
+| Type       |  Protocol  |          Port         |             Source            | Description |
+|------------|------------|-----------------------|-------------------------------|-------------|
+| PostgreSQL | TCP | 5432 |       0.0.0.0/0       | Allow from anywhere (testing) |
+| PostgreSQL | TCP | 5432 | Lambda Security Group | Allow from Lambda (production)|
 
 **Note:** After testing, restrict `0.0.0.0/0` to specific IP ranges or remove entirely
 

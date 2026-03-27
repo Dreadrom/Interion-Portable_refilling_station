@@ -1,13 +1,14 @@
 import { router } from 'expo-router';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 
 import { useRef } from 'react';
-import { Connect } from './test_home';
+import { Connect } from '../../src/services/PTSConnect';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 export default function HomeScreen() {
-
+  const { user, logout } = useAuthStore();
   const connectRef = useRef<Connect | null>(null);
 
   if (!connectRef.current) {
@@ -15,9 +16,7 @@ export default function HomeScreen() {
   }
 
   const onConnectPressed = () => {
-    console.log('[Connect]] Connect clicked');
-    connectRef.current?.onConnectClicked();
-    router.push('/connected-screen'); // navigate to debug page
+    router.push('/qr-scanner');
   };
 
   return (
@@ -25,7 +24,7 @@ export default function HomeScreen() {
       <Text style={styles.header}>Interion Portable Refill Station</Text>
 
       <View style={styles.walletBox}>
-        <Text style={styles.username}>Username</Text>
+        <Text style={styles.username}>{user?.name ?? 'Guest'}</Text>
         <Text style={styles.balance}>$501.90</Text>
       </View>
 
@@ -53,7 +52,7 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.logoutButton}
-        onPress={() => router.replace('/login')}
+        onPress={async () => { await logout(); router.replace('/login'); }}
       >
         <Text>Logout</Text>
       </TouchableOpacity>

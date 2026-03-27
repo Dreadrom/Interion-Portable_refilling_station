@@ -45,7 +45,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "API_BASE_URL": "https://api.example.com",
+      "API_BASE_URL": "https://cp1.interion.com.sg",
       "API_TIMEOUT": "30000",
       "FIUU_ENV": "sandbox",
       "APP_ENV": "development",

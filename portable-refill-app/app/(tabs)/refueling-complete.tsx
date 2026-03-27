@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 import { transactionStore, TransactionData } from '../../src/utils/transactionStore';
 
 export default function RefuelingCompleteScreen() {

@@ -9,34 +9,26 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
-import { User } from '../../src/types/user';
+import { globalStyles } from '../../src/styles/globalStyles';
+import { useAuthStore } from '../../src/stores/useAuthStore';
+import { updateProfile } from '../../src/api/auth';
 
 export default function ProfileScreen() {
-  // Mock user data - in production this would come from user context/API
-  const [user, setUser] = useState<User>({
-    id: 'user_123456',
-    email: 'john.doe@example.com',
-    name: 'John Doe',
-    phone: '+60 12-345 6789',
-    role: 'DRIVER',
-    createdAt: '2025-01-15T08:00:00Z',
-  });
-  
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone || '');
+  const { user, logout } = useAuthStore();
+
+  const [name, setName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [phone, setPhone] = useState(user?.phone ?? '');
   
   const [isEditing, setIsEditing] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  const memberSince = user ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
   const walletBalance = 501.90;
   const totalTransactions = 47;
   const currency = 'MYR';
 
   const handleSave = async () => {
-    // Validation
     if (!name.trim()) {
       Alert.alert('Validation Error', 'Name is required.');
       return;
@@ -50,12 +42,7 @@ export default function ProfileScreen() {
     setProcessing(true);
 
     try {
-      // Simulate API call with UpdateProfileRequest
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Update user state
-      setUser({ ...user, name, email, phone: phone || undefined });
-      
+      await updateProfile({ name, email, phone: phone || undefined });
       Alert.alert('Success', 'Your profile has been updated successfully.');
       setIsEditing(false);
     } catch (error: any) {
@@ -66,10 +53,9 @@ export default function ProfileScreen() {
   };
 
   const handleCancel = () => {
-    // Reset to original values
-    setName(user.name);
-    setEmail(user.email);
-    setPhone(user.phone || '');
+    setName(user?.name ?? '');
+    setEmail(user?.email ?? '');
+    setPhone(user?.phone ?? '');
     setIsEditing(false);
   };
 
@@ -109,9 +95,9 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarText}>{(user?.name ?? 'U').charAt(0).toUpperCase()}</Text>
         </View>
-        <Text style={styles.headerTitle}>{user.name}</Text>
+        <Text style={styles.headerTitle}>{user?.name ?? ''}</Text>
         <Text style={styles.headerSubtitle}>Member since {memberSince}</Text>
       </View>
 

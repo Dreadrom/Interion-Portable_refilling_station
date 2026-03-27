@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 import { forgotPassword, resetPassword } from '../../src/api/auth';
 
 export default function ForgotPasswordScreen() {

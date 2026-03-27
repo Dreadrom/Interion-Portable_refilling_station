@@ -2,14 +2,14 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 
 import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
-import { login } from '../../src/api/auth';
+import { globalStyles } from '../../src/styles/globalStyles';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -17,18 +17,11 @@ export default function LoginScreen() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await login({ email, password });
-      
-      // Store token here (e.g., in AsyncStorage or SecureStore)
-      // await SecureStore.setItemAsync('authToken', response.token);
-      
+      await login({ email, password });
       router.replace('/home');
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'An error occurred during login');
-    } finally {
-      setIsLoading(false);
     }
   };
 

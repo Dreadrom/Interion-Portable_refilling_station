@@ -24,14 +24,14 @@ import {
 } from '../utils/response';
 
 interface User {
-  UserID: string;
-  UserEmail: string;
-  UserPassword: string;
-  UserName: string;
-  UserPhone: string | null;
-  UserRole: 'ADMIN' | 'DRIVER';
-  CreatedAt: string;
-  UpdatedAt: string;
+  userid: string;
+  useremail: string;
+  userpassword: string;
+  username: string;
+  userphone: string | null;
+  userrole: 'ADMIN' | 'DRIVER';
+  createdat: string;
+  updatedat: string;
 }
 
 /**
@@ -123,7 +123,7 @@ async function handleRegister(
 
   // Check if user already exists
   const existingUser = await queryOne<User>(
-    'SELECT UserID FROM Users WHERE UserEmail = $1',
+    'SELECT userid FROM Users WHERE UserEmail = $1',
     [email]
   );
 
@@ -191,7 +191,7 @@ async function handleLogin(
   }
 
   // Verify password
-  const isValidPassword = await bcrypt.compare(password, user.UserPassword);
+  const isValidPassword = await bcrypt.compare(password, user.userpassword);
 
   if (!isValidPassword) {
     return unauthorizedError('Invalid email or password');
@@ -199,9 +199,9 @@ async function handleLogin(
 
   // Generate tokens
   const tokenPayload = {
-    userId: user.UserID,
-    email: user.UserEmail,
-    role: user.UserRole,
+    userId: user.userid,
+    email: user.useremail,
+    role: user.userrole,
   };
   const token = generateToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
@@ -209,13 +209,13 @@ async function handleLogin(
   // Return user data
   return successResponse({
     user: {
-      id: user.UserID,
-      email: user.UserEmail,
-      name: user.UserName,
-      phone: user.UserPhone,
-      role: user.UserRole,
-      createdAt: user.CreatedAt,
-      updatedAt: user.UpdatedAt,
+      id: user.userid,
+      email: user.useremail,
+      name: user.username,
+      phone: user.userphone,
+      role: user.userrole,
+      createdAt: user.createdat,
+      updatedAt: user.updatedat,
     },
     token,
     refreshToken,
@@ -254,13 +254,13 @@ async function handleGetMe(
   }
 
   return successResponse({
-    id: user.UserID,
-    email: user.UserEmail,
-    name: user.UserName,
-    phone: user.UserPhone,
-    role: user.UserRole,
-    createdAt: user.CreatedAt,
-    updatedAt: user.UpdatedAt,
+    id: user.userid,
+    email: user.useremail,
+    name: user.username,
+    phone: user.userphone,
+    role: user.userrole,
+    createdAt: user.createdat,
+    updatedAt: user.updatedat,
   });
 }
 
@@ -297,7 +297,7 @@ async function handleForgotPassword(
   await query(
     `INSERT INTO PasswordResetTokens (TokenID, UserID, Token, ExpiresAt)
      VALUES ($1, $2, $3, $4)`,
-    [uuidv4(), user.UserID, resetToken, expiresAt]
+    [uuidv4(), user.userid, resetToken, expiresAt]
   );
 
   // TODO: Send email with reset token
@@ -345,13 +345,13 @@ async function handleResetPassword(
   // Update user password
   await query(
     'UPDATE Users SET UserPassword = $1 WHERE UserID = $2',
-    [hashedPassword, resetToken.UserID]
+    [hashedPassword, resetToken.userid]
   );
 
   // Mark token as used
   await query(
     'UPDATE PasswordResetTokens SET Used = TRUE WHERE TokenID = $1',
-    [resetToken.TokenID]
+    [resetToken.tokenid]
   );
 
   return successResponse({
@@ -415,13 +415,13 @@ async function handleUpdateProfile(
   );
 
   return successResponse({
-    id: user!.UserID,
-    email: user!.UserEmail,
-    name: user!.UserName,
-    phone: user!.UserPhone,
-    role: user!.UserRole,
-    createdAt: user!.CreatedAt,
-    updatedAt: user!.UpdatedAt,
+    id: user!.userid,
+    email: user!.useremail,
+    name: user!.username,
+    phone: user!.userphone,
+    role: user!.userrole,
+    createdAt: user!.createdat,
+    updatedAt: user!.updatedat,
   });
 }
 
@@ -467,7 +467,7 @@ async function handleChangePassword(
   }
 
   // Verify current password
-  const isValidPassword = await bcrypt.compare(currentPassword, user.UserPassword);
+  const isValidPassword = await bcrypt.compare(currentPassword, user.userpassword);
 
   if (!isValidPassword) {
     return unauthorizedError('Current password is incorrect');
@@ -479,7 +479,7 @@ async function handleChangePassword(
   // Update password
   await query(
     'UPDATE Users SET UserPassword = $1 WHERE UserID = $2',
-    [hashedPassword, user.UserID]
+    [hashedPassword, user.userid]
   );
 
   return successResponse({

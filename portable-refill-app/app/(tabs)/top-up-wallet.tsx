@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 
 const PRESET_AMOUNTS = [10, 20, 50, 100, 200, 500];
 

@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, ProductType } from '../../src/types';
 

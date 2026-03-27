@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { globalStyles } from '../styles/globalStyles';
-import { register } from '../../src/api/auth';
+import { globalStyles } from '../../src/styles/globalStyles';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 export default function CreateAccountScreen() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -11,7 +11,7 @@ export default function CreateAccountScreen() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, isLoading } = useAuthStore();
 
   const handleSendVerification = () => {
     // SEND VERIFICATION CODE TO 'email'
@@ -49,24 +49,11 @@ export default function CreateAccountScreen() {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await register({ 
-        email, 
-        password, 
-        name 
-      });
-      
-      Alert.alert('Registration Success', `Account created! Token: ${response.token?.substring(0, 20)}...`);
-      
-      // Store token here (e.g., in AsyncStorage or SecureStore)
-      // await SecureStore.setItemAsync('authToken', response.token);
-      
+      await register({ email, password, name });
       router.replace('/home');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
-    } finally {
-      setIsLoading(false);
     }
   };
 

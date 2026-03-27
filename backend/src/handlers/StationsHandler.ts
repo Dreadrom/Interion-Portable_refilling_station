@@ -16,19 +16,19 @@ import {
 } from '../utils/response';
 
 interface Station {
-  StationID: string;
-  StationName: string;
-  Location: string;
-  Latitude: number;
-  Longitude: number;
-  Timezone: string;
-  Status: 'IDLE' | 'DISPENSING' | 'ALARM' | 'OFFLINE' | 'MAINTENANCE';
-  LastHeartbeat: string;
-  CreatedAt: string;
-  UpdatedAt: string;
-  PTSHost?: string;
-  PTSPort?: number;
-  PTSProtocol?: 'HTTP' | 'HTTPS';
+  stationid: string;
+  stationname: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  status: 'IDLE' | 'DISPENSING' | 'ALARM' | 'OFFLINE' | 'MAINTENANCE';
+  lastheartbeat: string;
+  createdat: string;
+  updatedat: string;
+  ptshost?: string;
+  ptsport?: number;
+  ptsprotocol?: 'HTTP' | 'HTTPS';
 }
 
 interface TankStatus {
@@ -452,10 +452,8 @@ async function handleGetStations(
 
     // Filter by status if provided
     if (status) {
-      const statuses = status.split(',');
-      const placeholders = statuses.map(() => '?').join(',');
-      sql += ` AND Status IN (${placeholders})`;
-      sqlParams.push(...statuses);
+      sqlParams.push(status.split(','));
+      sql += ` AND status = ANY($${sqlParams.length})`;
     }
 
     // Calculate distance if location provided
@@ -463,16 +461,19 @@ async function handleGetStations(
       const lat = parseFloat(latitude);
       const lng = parseFloat(longitude);
       const radius = radiusKm ? parseFloat(radiusKm) : 10;
+      const p = sqlParams.length;
 
       sql = `
-        SELECT *,
-          (6371 * acos(
-            cos(radians(?)) * cos(radians(Latitude)) *
-            cos(radians(Longitude) - radians(?)) +
-            sin(radians(?)) * sin(radians(Latitude))
-          )) AS distance
-        FROM (${sql}) AS stations
-        WHERE distance <= ?
+        SELECT * FROM (
+          SELECT *,
+            (6371 * acos(
+              cos(radians($${p + 1})) * cos(radians(latitude)) *
+              cos(radians(longitude) - radians($${p + 2})) +
+              sin(radians($${p + 3})) * sin(radians(latitude))
+            )) AS distance
+          FROM (${sql}) AS stations
+        ) AS with_distance
+        WHERE distance <= $${p + 4}
         ORDER BY distance
       `;
       sqlParams.push(lat, lng, lat, radius);
@@ -485,16 +486,26 @@ async function handleGetStations(
       stations.map(async (station: any) => {
         const products = await query(
           `
-          SELECT DISTINCT Product as product
+          SELECT DISTINCT product
           FROM StationPricing
-          WHERE StationID = ? AND (EffectiveTo IS NULL OR EffectiveTo > NOW())
+          WHERE stationid = $1 AND (effectiveto IS NULL OR effectiveto > NOW())
           ORDER BY product
         `,
           [station.id]
         );
 
         return {
-          ...station,
+          id: station.id,
+          name: station.name,
+          location: {
+            latitude: parseFloat(station.latitude) || 0,
+            longitude: parseFloat(station.longitude) || 0,
+            address: station.address || undefined,
+          },
+          timezone: station.timezone || 'Asia/Kuala_Lumpur',
+          status: station.status,
+          lastHeartbeat: station.lastheartbeat || new Date().toISOString(),
+          createdAt: station.createdat,
           availableProducts: products.map((p: any) => p.product),
         };
       })
@@ -515,21 +526,21 @@ async function handleGetStationById(id: string): Promise<APIGatewayProxyResult> 
     const station = await queryOne(
       `
       SELECT 
-        StationID as id,
-        StationName as name,
-        Location as address,
-        Latitude as latitude,
-        Longitude as longitude,
-        Timezone as timezone,
-        Status as status,
-        LastHeartbeat as lastHeartbeat,
-        CreatedAt as createdAt,
-        UpdatedAt as updatedAt,
-        PTSHost,
-        PTSPort,
-        PTSProtocol
+        stationid as id,
+        stationname as name,
+        location as address,
+        latitude,
+        longitude,
+        timezone,
+        status,
+        lastheartbeat as lastHeartbeat,
+        createdat as createdAt,
+        updatedat as updatedAt,
+        ptshost,
+        ptsport,
+        ptsprotocol
       FROM Stations
-      WHERE StationID = ?
+      WHERE stationid = $1
     `,
       [id]
     );
@@ -540,12 +551,12 @@ async function handleGetStationById(id: string): Promise<APIGatewayProxyResult> 
 
     // Get tank status from PTS-2 controller if available
     let tankStatus: any[] = [];
-    if (station.PTSHost && station.PTSPort) {
+    if (station.ptshost && station.ptsport) {
       try {
         const pts = new PTSController(
-          station.PTSHost,
-          station.PTSPort,
-          station.PTSProtocol || 'HTTP'
+          station.ptshost,
+          station.ptsport,
+          station.ptsprotocol || 'HTTP'
         );
         const tanks = await pts.getTanks();
 
@@ -568,66 +579,68 @@ async function handleGetStationById(id: string): Promise<APIGatewayProxyResult> 
 
     // If PTS failed or not configured, get from database
     if (tankStatus.length === 0) {
-      tankStatus = await query(
-        `
-        SELECT 
-          TankID as id,
-          StationID as stationId,
-          Product as product,
-          LevelLitres as levelLitres,
-          CapacityLitres as capacityLitres,
-          TemperatureC as temperatureC,
-          LowLevelAlarm as lowLevelAlarm,
-          HighLevelAlarm as highLevelAlarm,
-          Timestamp as timestamp
-        FROM TankStatus
-        WHERE StationID = ?
-        ORDER BY Product
-      `,
+      const tankRows = await query(
+        `SELECT tankid, stationid, product, levellitres, capacitylitres, temperaturec, lowlevelalarm, highlevelalarm, timestamp FROM tankstatus WHERE stationid = $1 ORDER BY product`,
         [id]
       );
+      tankStatus = tankRows.map((t: any) => ({
+        id: t.tankid,
+        stationId: t.stationid,
+        product: t.product,
+        levelLitres: parseFloat(t.levellitres) || 0,
+        capacityLitres: parseFloat(t.capacitylitres) || 0,
+        temperatureC: parseFloat(t.temperaturec) || 0,
+        lowLevelAlarm: !!t.lowlevelalarm,
+        highLevelAlarm: !!t.highlevelalarm,
+        timestamp: t.timestamp,
+      }));
     }
 
     // Get pricing
-    const pricing = await query(
-      `
-      SELECT 
-        PricingID as id,
-        StationID as stationId,
-        Product as product,
-        UnitPrice as unitPrice,
-        Currency as currency,
-        EffectiveFrom as effectiveFrom,
-        EffectiveTo as effectiveTo
-      FROM StationPricing
-      WHERE StationID = ? AND (EffectiveTo IS NULL OR EffectiveTo > NOW())
-      ORDER BY Product
-    `,
+    const pricingRaw = await query(
+      `SELECT pricingid as id, stationid, product, unitprice, currency, effectivefrom, effectiveto FROM stationpricing WHERE stationid = $1 AND (effectiveto IS NULL OR effectiveto > NOW()) ORDER BY product`,
       [id]
     );
+    const pricing = pricingRaw.map((p: any) => ({
+      id: p.id,
+      stationId: p.stationid,
+      product: p.product,
+      unitPrice: parseFloat(p.unitprice) || 0,
+      currency: p.currency,
+      effectiveFrom: p.effectivefrom,
+      effectiveTo: p.effectiveto || undefined,
+    }));
 
     // Get config
-    const config = await queryOne(
-      `
-      SELECT 
-        StationID as stationId,
-        MaxDispenseVolume as maxDispenseVolume,
-        MaxDispenseAmount as maxDispenseAmount,
-        MaintenanceMode as maintenanceMode,
-        Enabled as enabled,
-        EmergencyStopEnabled as emergencyStopEnabled,
-        AutoStopOnTargetReached as autoStopOnTargetReached
-      FROM StationConfig
-      WHERE StationID = ?
-    `,
+    const configRaw = await queryOne(
+      `SELECT stationid, maxdispensevolume, maxdispenseamount, maintenancemode, enabled, emergencystopenabled, autostopontargetreached FROM stationconfig WHERE stationid = $1`,
       [id]
     );
+    const formattedConfig = configRaw ? {
+      stationId: configRaw.stationid,
+      maxDispenseVolume: parseFloat(configRaw.maxdispensevolume) || 100,
+      maxDispenseAmount: parseFloat(configRaw.maxdispenseamount) || 500,
+      maintenanceMode: !!configRaw.maintenancemode,
+      enabled: !!configRaw.enabled,
+      emergencyStopEnabled: !!configRaw.emergencystopenabled,
+      autoStopOnTargetReached: !!configRaw.autostopontargetreached,
+    } : undefined;
 
     const stationDetail = {
-      ...station,
+      id: station.id,
+      name: station.name,
+      location: {
+        latitude: parseFloat(station.latitude) || 0,
+        longitude: parseFloat(station.longitude) || 0,
+        address: station.address || undefined,
+      },
+      timezone: station.timezone || 'Asia/Kuala_Lumpur',
+      status: station.status,
+      lastHeartbeat: station.lastheartbeat || new Date().toISOString(),
+      createdAt: station.createdat,
       tankStatus,
       pricing,
-      config: config || undefined,
+      config: formattedConfig,
       availableProducts: pricing.map((p: any) => p.product),
     };
 
@@ -644,7 +657,7 @@ async function handleGetStationById(id: string): Promise<APIGatewayProxyResult> 
 async function handleGetStationTank(id: string): Promise<APIGatewayProxyResult> {
   try {
     const station = await queryOne(
-      'SELECT PTSHost, PTSPort, PTSProtocol FROM Stations WHERE StationID = ?',
+      'SELECT ptshost, ptsport, ptsprotocol FROM Stations WHERE stationid = $1',
       [id]
     );
 
@@ -655,12 +668,12 @@ async function handleGetStationTank(id: string): Promise<APIGatewayProxyResult> 
     let tankStatus: any[] = [];
 
     // Try to get from PTS-2 controller first
-    if (station.PTSHost && station.PTSPort) {
+    if (station.ptshost && station.ptsport) {
       try {
         const pts = new PTSController(
-          station.PTSHost,
-          station.PTSPort,
-          station.PTSProtocol || 'HTTP'
+          station.ptshost,
+          station.ptsport,
+          station.ptsprotocol || 'HTTP'
         );
         const tanks = await pts.getTanks();
 
@@ -684,24 +697,21 @@ async function handleGetStationTank(id: string): Promise<APIGatewayProxyResult> 
     }
 
     // Fall back to database
-    tankStatus = await query(
-      `
-      SELECT 
-        TankID as id,
-        StationID as stationId,
-        Product as product,
-        LevelLitres as levelLitres,
-        CapacityLitres as capacityLitres,
-        TemperatureC as temperatureC,
-        LowLevelAlarm as lowLevelAlarm,
-        HighLevelAlarm as highLevelAlarm,
-        Timestamp as timestamp
-      FROM TankStatus
-      WHERE StationID = ?
-      ORDER BY Product
-    `,
+    const tankFallbackRows = await query(
+      `SELECT tankid, stationid, product, levellitres, capacitylitres, temperaturec, lowlevelalarm, highlevelalarm, timestamp FROM tankstatus WHERE stationid = $1 ORDER BY product`,
       [id]
     );
+    tankStatus = tankFallbackRows.map((t: any) => ({
+      id: t.tankid,
+      stationId: t.stationid,
+      product: t.product,
+      levelLitres: parseFloat(t.levellitres) || 0,
+      capacityLitres: parseFloat(t.capacitylitres) || 0,
+      temperatureC: parseFloat(t.temperaturec) || 0,
+      lowLevelAlarm: !!t.lowlevelalarm,
+      highLevelAlarm: !!t.highlevelalarm,
+      timestamp: t.timestamp,
+    }));
 
     return successResponse(tankStatus);
   } catch (error: any) {
@@ -718,14 +728,14 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
     const station = await queryOne(
       `
       SELECT 
-        StationID,
-        Status,
-        LastHeartbeat,
-        PTSHost,
-        PTSPort,
-        PTSProtocol
+        stationid,
+        status,
+        lastheartbeat,
+        ptshost,
+        ptsport,
+        ptsprotocol
       FROM Stations
-      WHERE StationID = ?
+      WHERE stationid = $1
     `,
       [id]
     );
@@ -737,10 +747,10 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
     // Check for active transaction
     const activeTransaction = await queryOne(
       `
-      SELECT TransactionID
+      SELECT transactionid
       FROM Transactions
-      WHERE StationID = ? AND Status = 'IN_PROGRESS'
-      ORDER BY CreatedAt DESC
+      WHERE stationid = $1 AND status = 'IN_PROGRESS'
+      ORDER BY createdat DESC
       LIMIT 1
     `,
       [id]
@@ -748,12 +758,12 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
 
     // Try to get real-time status from PTS-2 controller
     let ptsStatus = null;
-    if (station.PTSHost && station.PTSPort) {
+    if (station.ptshost && station.ptsport) {
       try {
         const pts = new PTSController(
-          station.PTSHost,
-          station.PTSPort,
-          station.PTSProtocol || 'HTTP'
+          station.ptshost,
+          station.ptsport,
+          station.ptsprotocol || 'HTTP'
         );
 
         // Get current deliveries to check if dispensing
@@ -765,7 +775,7 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
         const hasActiveAlarm = alarms.some((a) => a.active && !a.acknowledged);
 
         // Determine status
-        let status = station.Status;
+        let status = station.status;
         if (hasActiveAlarm) {
           status = 'ALARM';
         } else if (hasActiveDelivery) {
@@ -778,7 +788,7 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
           stationId: id,
           status,
           lastHeartbeat: new Date().toISOString(),
-          currentTransaction: activeTransaction?.TransactionID || undefined,
+          currentTransaction: activeTransaction?.transactionid || undefined,
           ptsConnected: true,
           alarms: alarms.filter((a) => a.active),
           deliveries,
@@ -795,9 +805,9 @@ async function handleGetStationStatus(id: string): Promise<APIGatewayProxyResult
 
     return successResponse({
       stationId: id,
-      status: station.Status,
-      lastHeartbeat: station.LastHeartbeat,
-      currentTransaction: activeTransaction?.TransactionID || undefined,
+      status: station.status,
+      lastHeartbeat: station.lastheartbeat,
+      currentTransaction: activeTransaction?.transactionid || undefined,
       ptsConnected: false,
     });
   } catch (error: any) {

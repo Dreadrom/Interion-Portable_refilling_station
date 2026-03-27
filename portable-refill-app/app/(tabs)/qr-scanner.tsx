@@ -11,7 +11,7 @@ import {
   RefreshControl 
 } from 'react-native';
 import * as Location from 'expo-location';
-import { globalStyles } from '../styles/globalStyles';
+import { globalStyles } from '../../src/styles/globalStyles';
 import { getStations, getStationById } from '../../src/api/stations';
 import { StationDetail, TankStatus } from '../../src/types';
 
@@ -22,7 +22,7 @@ export default function NearbyStationsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [stations, setStations] = useState<StationDetail[]>([]);
+  const [stations, setStations] = useState<(StationDetail & { distanceKm?: number })[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,47 +32,53 @@ export default function NearbyStationsScreen() {
   const getLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      setHasPermission(status === 'granted');
-      
-      if (status === 'granted') {
-        fetchNearbyStations();
-      }
+      const granted = status === 'granted';
+      setHasPermission(granted);
+      fetchNearbyStations(granted);
     } catch (err) {
-      setError('Failed to request location permission');
-      console.error('Permission error:', err);
+      setHasPermission(false);
+      fetchNearbyStations(false);
     }
   };
 
-  const fetchNearbyStations = async () => {
+  const fetchNearbyStations = async (useLocation: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get current location
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(currentLocation);
+      let locationCoords: { latitude: number; longitude: number } | null = null;
 
-      // Fetch stations within radius
-      const stationsList = await getStations({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-        radiusKm: DEFAULT_RADIUS_KM,
-      });
+      if (useLocation) {
+        try {
+          const currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setLocation(currentLocation);
+          locationCoords = currentLocation.coords;
+        } catch {
+          // Location unavailable — proceed without radius filter
+        }
+      }
+
+      // Fetch stations (with radius if location available, otherwise all)
+      const stationsList = await getStations(
+        locationCoords
+          ? { latitude: locationCoords.latitude, longitude: locationCoords.longitude, radiusKm: DEFAULT_RADIUS_KM }
+          : undefined
+      );
 
       // Fetch detailed information for each station (including tank status)
       const stationsWithDetails = await Promise.all(
         stationsList.map(async (station) => {
           try {
             const detail = await getStationById(station.id);
-            // Calculate distance
-            const distance = calculateDistance(
-              currentLocation.coords.latitude,
-              currentLocation.coords.longitude,
+            // Calculate distance only if we have user location
+            const distance = locationCoords ? calculateDistance(
+              locationCoords.latitude,
+              locationCoords.longitude,
               station.location.latitude,
               station.location.longitude
-            );
+            ) : undefined;
             return { ...detail, distanceKm: distance };
           } catch (err) {
             console.error(`Failed to fetch details for station ${station.id}:`, err);
@@ -81,9 +87,10 @@ export default function NearbyStationsScreen() {
         })
       );
 
-      const validStations = stationsWithDetails.filter((s): s is StationDetail & { distanceKm: number } => s !== null);
-      // Sort by distance
-      validStations.sort((a, b) => a.distanceKm - b.distanceKm);
+      const validStations = stationsWithDetails
+        .filter((s) => s !== null) as (StationDetail & { distanceKm?: number })[];
+      // Sort by distance (stations with distance first, then by name)
+      validStations.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
       
       setStations(validStations);
     } catch (err: any) {
@@ -97,7 +104,7 @@ export default function NearbyStationsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchNearbyStations();
+    await fetchNearbyStations(hasPermission === true);
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -123,22 +130,7 @@ export default function NearbyStationsScreen() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#10B981" />
-        <Text style={styles.loadingText}>Requesting location permission...</Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Location permission denied</Text>
-        <Text style={styles.subtitle}>Please enable location access to find nearby stations</Text>
-        <TouchableOpacity 
-          style={[globalStyles.primaryButton, { marginTop: 20 }]} 
-          onPress={getLocationPermission}
-        >
-          <Text style={globalStyles.primaryButtonText}>Request Permission</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadingText}>Loading stations...</Text>
       </View>
     );
   }
@@ -164,7 +156,7 @@ export default function NearbyStationsScreen() {
       <Text style={styles.subtitle}>
         {location 
           ? `Showing stations within ${DEFAULT_RADIUS_KM}km of your location`
-          : 'Getting your location...'}
+          : 'All available stations'}
       </Text>
 
       {error && (
@@ -172,7 +164,7 @@ export default function NearbyStationsScreen() {
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity 
             style={[globalStyles.primaryButton, { marginTop: 12 }]} 
-            onPress={fetchNearbyStations}
+            onPress={() => fetchNearbyStations(hasPermission === true)}
           >
             <Text style={globalStyles.primaryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -198,7 +190,9 @@ export default function NearbyStationsScreen() {
               <Text style={styles.stationAddress}>{station.location.address}</Text>
               <View style={styles.distanceContainer}>
                 <Text style={styles.distanceText}>
-                  📍 {station.distanceKm?.toFixed(1)} km away
+                  {station.distanceKm != null
+                    ? `📍 ${station.distanceKm.toFixed(1)} km away`
+                    : `📍 ${station.location.address || 'Available'}`}
                 </Text>
                 <View style={[styles.statusBadge, getStatusColor(station.status)]}>
                   <Text style={styles.statusText}>{station.status}</Text>

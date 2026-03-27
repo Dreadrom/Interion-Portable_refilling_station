@@ -6,7 +6,7 @@ import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'rea
 import {
   defaultNetworkSettings,
   NetworkSettings
-} from '../network/NetworkSettings';
+} from '../../src/network/NetworkSettings';
 
 const STORAGE_KEY = 'PTS_CONNECTION_SETTINGS';
 
