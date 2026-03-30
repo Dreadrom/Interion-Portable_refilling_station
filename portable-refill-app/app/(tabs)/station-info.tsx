@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,11 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, Pricing } from '../../src/types';
+import { getDemoStationById } from '../../src/data/demoStations';
 
 export default function StationInfoScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ stationId: string }>();
   const [station, setStation] = useState<StationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,9 +49,19 @@ export default function StationInfoScreen() {
         setSelectedProduct(data.pricing[0].product);
       }
     } catch (err: any) {
-      console.error('Error loading station:', err);
-      setError(err.message || 'Failed to load station information');
-      Alert.alert('Error', err.message || 'Failed to load station information');
+      // Backend unavailable — fall back to demo data
+      const demoData = getDemoStationById(params.stationId);
+      if (demoData) {
+        // Expected in demo/dev mode: backend not reachable, using local demo station
+        console.warn('Station API unavailable, using demo data for:', params.stationId);
+        setStation(demoData);
+        if (demoData.pricing && demoData.pricing.length > 0) {
+          setSelectedProduct(demoData.pricing[0].product);
+        }
+      } else {
+        setError(err.message || 'Failed to load station information');
+        Alert.alert('Error', err.message || 'Failed to load station information');
+      }
     } finally {
       setLoading(false);
     }
@@ -95,22 +109,25 @@ export default function StationInfoScreen() {
       return;
     }
 
-    // Maximum limits from station config
-    const maxVolume = station?.config?.maxDispenseVolume || 100; // Default 100L
-    const maxAmount = station?.config?.maxDispenseAmount || 500; // Default 500 MYR
+    // Maximum limits — reduced to 10 L when tank lowLevelAlarm is active
+    const { maxVol: maxVolume, maxAmt: maxAmount, isLow: isLowTankAlarm } = getEffectiveLimits();
 
     if (requestedVolume > maxVolume) {
       Alert.alert(
-        'Amount Too High',
-        `Maximum refill is ${maxVolume} liters per transaction (${price.currency} ${(maxVolume * price.unitPrice).toFixed(2)})`
+        isLowTankAlarm ? 'Low Tank Limit' : 'Amount Too High',
+        isLowTankAlarm
+          ? `This station's tank is critically low. To keep the service running for all vehicles, refills are limited to ${maxVolume} L until the tanker arrives.`
+          : `Maximum refill is ${maxVolume} liters per transaction (${price.currency} ${(maxVolume * price.unitPrice).toFixed(2)})`
       );
       return;
     }
 
     if (requestedAmount > maxAmount) {
       Alert.alert(
-        'Amount Too High',
-        `Maximum refill amount is ${price.currency} ${maxAmount.toFixed(2)} per transaction (${(maxAmount / price.unitPrice).toFixed(2)} liters)`
+        isLowTankAlarm ? 'Low Tank Limit' : 'Amount Too High',
+        isLowTankAlarm
+          ? `This station's tank is critically low. To keep the service running for all vehicles, refills are limited to ${price.currency} ${maxAmount.toFixed(2)} until the tanker arrives.`
+          : `Maximum refill amount is ${price.currency} ${maxAmount.toFixed(2)} per transaction (${(maxAmount / price.unitPrice).toFixed(2)} liters)`
       );
       return;
     }
@@ -125,8 +142,8 @@ export default function StationInfoScreen() {
 
     if (selectedTank.levelLitres < requestedVolume) {
       Alert.alert(
-        'Insufficient Fuel',
-        `The station only has ${selectedTank.levelLitres.toFixed(2)} liters of ${selectedProduct} available.\n\nPlease reduce your refill amount or choose a different station.`
+        'Insufficient Solution',
+        `The station only has ${selectedTank.levelLitres.toFixed(2)} L of Solution available.\n\nPlease reduce your refill amount or choose a different station.`
       );
       return;
     }
@@ -138,7 +155,7 @@ export default function StationInfoScreen() {
     if (percentageRemaining < 20 && percentageRemaining >= 0) {
       Alert.alert(
         'Low Tank Warning',
-        `This refill will leave the tank at ${percentageRemaining.toFixed(0)}% capacity. The station may run out of ${selectedProduct} soon.\n\nDo you want to proceed?`,
+        `This refill will leave the tank at ${percentageRemaining.toFixed(0)}% capacity. The station may run out of Solution soon.\n\nDo you want to proceed?`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -188,6 +205,23 @@ export default function StationInfoScreen() {
     return station.pricing.find(p => p.product === selectedProduct);
   };
 
+  /**
+   * When the tank is at or below 10% (lowLevelAlarm), cap transactions at 20 L
+   * so enough solution remains for all users before the tanker arrives (within 24 h).
+   */
+  const LOW_TANK_MAX_VOLUME = 20;
+  const getEffectiveLimits = () => {
+    const tank = station?.tankStatus?.find(t => t.product === selectedProduct);
+    const isLow = tank?.lowLevelAlarm === true;
+    const price = getSelectedPrice();
+    const configMax = station?.config?.maxDispenseVolume || 100;
+    const maxVol = isLow ? Math.min(LOW_TANK_MAX_VOLUME, configMax) : configMax;
+    const maxAmt = isLow
+      ? maxVol * (price?.unitPrice || 10)
+      : (station?.config?.maxDispenseAmount || 500);
+    return { isLow, maxVol, maxAmt };
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -219,7 +253,7 @@ export default function StationInfoScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.stationName}>{station.name}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(station.status) }]}>
           <Text style={styles.statusText}>{station.status}</Text>
@@ -228,7 +262,7 @@ export default function StationInfoScreen() {
 
       {station.location?.address && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📍 Location</Text>
+          <Text style={styles.sectionTitle}>Location</Text>
           <Text style={styles.address}>{station.location.address}</Text>
           <Text style={styles.coordinates}>
             {station.location.latitude.toFixed(6)}, {station.location.longitude.toFixed(6)}
@@ -236,72 +270,123 @@ export default function StationInfoScreen() {
         </View>
       )}
 
-      {station.pricing && station.pricing.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⛽ Select Product</Text>
-          {station.pricing.map((price: Pricing) => {
-            const tank = station.tankStatus?.find(t => t.product === price.product);
-            const isAvailable = tank && tank.levelLitres > 0;
-            const isLowLevel = tank && tank.lowLevelAlarm;
-            
-            return (
-              <TouchableOpacity
-                key={price.id}
-                style={[
-                  styles.productCard,
-                  selectedProduct === price.product && styles.productCardSelected,
-                  !isAvailable && styles.productCardDisabled,
-                ]}
-                onPress={() => isAvailable && setSelectedProduct(price.product)}
-                disabled={!isAvailable}
-              >
-                <View style={styles.productCardContent}>
-                  <View>
-                    <Text style={[
-                      styles.productName,
-                      selectedProduct === price.product && styles.productNameSelected,
-                      !isAvailable && styles.productNameDisabled,
-                    ]}>
-                      {price.product}
-                    </Text>
-                    {tank && (
-                      <Text style={[
-                        styles.productAvailability,
-                        isLowLevel && styles.productAvailabilityLow,
-                        !isAvailable && styles.productAvailabilityEmpty,
-                      ]}>
-                        {tank.levelLitres > 0 
-                          ? `${tank.levelLitres.toLocaleString()}L available`
-                          : 'Out of stock'}
-                        {isLowLevel && tank.levelLitres > 0 && ' ⚠️'}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={[
-                    styles.productPrice,
-                    selectedProduct === price.product && styles.productPriceSelected,
-                    !isAvailable && styles.productPriceDisabled,
-                  ]}>
-                    {price.currency} {price.unitPrice.toFixed(2)}/L
-                  </Text>
-                </View>
-                {selectedProduct === price.product && isAvailable && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+      {/* In-use banner when station is currently dispensing */}
+      {station.status === 'DISPENSING' && (
+        <View style={styles.inUseBanner}>
+          <Ionicons name="water" size={18} color="#1D4ED8" />
+          <Text style={styles.inUseBannerText}>Station currently in use</Text>
         </View>
       )}
 
+      {/* Low-tank critical banner */}
+      {station.tankStatus?.[0]?.lowLevelAlarm && (
+        <View style={styles.lowTankBanner}>
+          <Ionicons name="warning" size={18} color="#92400E" />
+          <Text style={styles.lowTankBannerText}>
+            Tank critically low — owner has been notified to dispatch a tanker
+          </Text>
+        </View>
+      )}
+
+      {/* Pump status */}
+      {station.pumps && station.pumps.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pumps</Text>
+          <View style={styles.pumpsRow}>
+            {station.pumps.map((pump) => {
+              const pumpColor =
+                pump.status === 'IDLE' ? '#10B981'
+                : pump.status === 'IN_USE' ? '#3B82F6'
+                : pump.status === 'FAULT' ? '#EF4444'
+                : '#6B7280';
+              const pumpIcon =
+                pump.status === 'IDLE' ? 'checkmark-circle-outline'
+                : pump.status === 'IN_USE' ? 'water'
+                : pump.status === 'FAULT' ? 'alert-circle-outline'
+                : 'close-circle-outline';
+              return (
+                <View key={pump.id} style={styles.pumpCard}>
+                  <Ionicons name={pumpIcon as any} size={24} color={pumpColor} />
+                  <Text style={styles.pumpNumber}>Pump {pump.pumpNumber}</Text>
+                  <Text style={[styles.pumpStatus, { color: pumpColor }]}>{pump.status.replace('_', ' ')}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* AdBlue info card */}
+      {(() => {
+        const price = station.pricing?.[0];
+        const tank = station.tankStatus?.[0];
+        if (!price) return null;
+        const fillPct = tank
+          ? Math.min(100, (tank.levelLitres / tank.capacityLitres) * 100)
+          : 0;
+        const barColor = tank?.lowLevelAlarm ? '#F59E0B' : '#10B981';
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>AdBlue</Text>
+
+            <View style={styles.solutionPriceRow}>
+              <Ionicons name="pricetag-outline" size={20} color="#10B981" />
+              <Text style={styles.solutionPrice}>
+                {price.currency} {price.unitPrice.toFixed(2)}
+                <Text style={styles.solutionPriceUnit}> / L</Text>
+              </Text>
+            </View>
+
+            {tank && (
+              <View style={styles.tankSection}>
+                <View style={styles.tankLabelRow}>
+                  <View style={styles.tankLabelLeft}>
+                    <Ionicons name="flask-outline" size={16} color="#6B7280" />
+                    <Text style={styles.tankLabel}>Tank Level</Text>
+                  </View>
+                  <Text style={[styles.tankPct, tank.lowLevelAlarm && styles.tankPctLow]}>
+                    {Math.round(fillPct)}%
+                  </Text>
+                </View>
+                <View style={styles.tankBarTrack}>
+                  <View
+                    style={[
+                      styles.tankBarFill,
+                      { width: `${Math.round(fillPct)}%`, backgroundColor: barColor },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.tankRemaining, tank.lowLevelAlarm && styles.tankRemainingLow]}>
+                  {tank.levelLitres.toLocaleString()} L remaining
+                  {tank.lowLevelAlarm ? ' — Low stock' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      })()}
+
       {selectedProduct && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💧 Refill Amount</Text>
+          <Text style={styles.sectionTitle}>Refill Amount</Text>
+
+          {/* Low tank warning banner */}
+          {(() => {
+            const { isLow, maxVol } = getEffectiveLimits();
+            return isLow ? (
+              <View style={styles.lowTankBanner}>
+                <Ionicons name="warning" size={16} color="#92400E" />
+                <Text style={styles.lowTankBannerText}>
+                  Tank critically low — refills are limited to {maxVol} L per transaction to keep the service available for all vehicles until the tanker arrives (within 24 h).
+                </Text>
+              </View>
+            ) : null;
+          })()}
           
           {/* Show limits info */}
           <View style={styles.limitsInfo}>
             <Text style={styles.limitsText}>
-              Min: 1L • Max: {station.config?.maxDispenseVolume || 100}L per transaction
+              Min: 1L • Max: {getEffectiveLimits().maxVol}L per transaction
             </Text>
           </View>
           
@@ -394,13 +479,12 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     padding: 24,
-    paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   stationName: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#111827',
     marginBottom: 12,
   },
@@ -505,6 +589,23 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontWeight: 'bold',
   },
+  lowTankBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  lowTankBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
+  },
   limitsInfo: {
     backgroundColor: '#F3F4F6',
     padding: 12,
@@ -588,5 +689,105 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#EF4444',
     textAlign: 'center',
+  },
+  pumpsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pumpCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  pumpNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  pumpStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inUseBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+    padding: 14,
+    marginTop: 12,
+  },
+  inUseBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1D4ED8',
+  },
+  solutionPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  solutionPrice: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  solutionPriceUnit: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: '#6B7280',
+  },
+  tankSection: {
+    marginTop: 4,
+  },
+  tankLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tankLabelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tankLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  tankPct: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  tankPctLow: {
+    color: '#F59E0B',
+  },
+  tankBarTrack: {
+    height: 10,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  tankBarFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  tankRemaining: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  tankRemainingLow: {
+    color: '#F59E0B',
   },
 });

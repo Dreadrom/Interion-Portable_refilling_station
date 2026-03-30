@@ -9,21 +9,28 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { transactionStore, TransactionData } from '../../src/utils/transactionStore';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 export default function RefuelingCompleteScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { isGuest, user } = useAuthStore();
   const [transaction, setTransaction] = useState<TransactionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const transactionId = params.transactionId as string;
+  const refundAmountParam = parseFloat(params.refundAmount as string) || 0;
+  const currencyParam = (params.currency as string) || 'MYR';
 
   useEffect(() => {
     loadTransaction();
   }, []);
 
-  const loadTransaction = () => {
+  const loadTransaction = async () => {
     if (!transactionId) {
       Alert.alert('Error', 'Invalid transaction ID', [
         { text: 'OK', onPress: () => router.push('./home') }
@@ -31,7 +38,7 @@ export default function RefuelingCompleteScreen() {
       return;
     }
 
-    const txn = transactionStore.getTransaction(transactionId);
+    const txn = await transactionStore.getTransaction(transactionId);
     
     if (!txn) {
       Alert.alert('Error', 'Transaction not found or has expired', [
@@ -60,11 +67,7 @@ export default function RefuelingCompleteScreen() {
   const refundAmount = Math.max(holdAmountValue - chargedValue, 0);
 
   const handleSaveReceipt = () => {
-    Alert.alert(
-      'Receipt Saved',
-      'Your receipt has been saved to your transaction history.',
-      [{ text: 'OK' }]
-    );
+    router.push('./transaction-history' as any);
   };
 
   const handleDone = () => {
@@ -74,9 +77,11 @@ export default function RefuelingCompleteScreen() {
   const getStopReasonText = () => {
     switch (stopReason) {
       case 'TARGET_REACHED':
-        return 'Preset target reached';
+        return 'Order Fulfilled';
       case 'USER_STOPPED':
         return 'Manually stopped by user';
+      case 'TANK_FULL':
+        return 'Vehicle tank full — pump auto-stopped';
       case 'EMERGENCY_STOP':
         return 'Emergency stop activated';
       default:
@@ -85,14 +90,14 @@ export default function RefuelingCompleteScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       {/* Success Header */}
       <View style={styles.successHeader}>
         <View style={styles.successIconContainer}>
-          <Text style={styles.successIcon}>✓</Text>
+          <Ionicons name="checkmark" size={48} color="#fff" />
         </View>
         <Text style={styles.successTitle}>Refueling Complete!</Text>
-      <Text style={styles.successSubtitle}>Transaction completed successfully</Text>
+        <Text style={styles.successSubtitle}>Transaction completed successfully</Text>
         <Text style={styles.cardTitle}>Transaction Summary</Text>
         
         <View style={styles.summaryRow}>
@@ -145,7 +150,7 @@ export default function RefuelingCompleteScreen() {
 
       {/* Payment Breakdown */}
       <View style={[styles.card, styles.paymentCard]}>
-        <Text style={styles.cardTitle}>💳 Payment Breakdown</Text>
+        <Text style={styles.cardTitle}>Payment Breakdown</Text>
         
         <View style={styles.paymentRow}>
           <Text style={styles.paymentLabel}>Hold Amount:</Text>
@@ -157,13 +162,6 @@ export default function RefuelingCompleteScreen() {
           <Text style={styles.paymentValueCharge}>{currency} {amountCharged.toFixed(2)}</Text>
         </View>
 
-        {refundAmount > 0 && (
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Refund Amount:</Text>
-            <Text style={styles.paymentValueRefund}>{currency} {refundAmount.toFixed(2)}</Text>
-          </View>
-        )}
-
         <View style={styles.separator} />
 
         <View style={styles.finalChargeRow}>
@@ -172,14 +170,42 @@ export default function RefuelingCompleteScreen() {
         </View>
       </View>
 
-      {/* Info Note */}
+      {/* Updated wallet balance card */}
+      {!isGuest && (
+        <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="wallet-outline" size={22} color="#10B981" />
+            <Text style={{ fontSize: 15, color: '#6B7280' }}>Wallet Balance</Text>
+          </View>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: '#111827' }}>
+            {currencyParam} {(user?.walletBalance ?? 0).toFixed(2)}
+          </Text>
+        </View>
+      )}
+
+      {/* Payment confirmation */}
       <View style={styles.infoCard}>
-        <Text style={styles.infoIcon}>✓</Text>
+        <Ionicons name="checkmark-circle" size={20} color="#3B82F6" style={styles.infoIconStyle} />
         <Text style={styles.infoText}>
-          Payment of {currency} {amountCharged.toFixed(2)} has been charged to your wallet.
-          {refundAmount > 0 && ` ${currency} ${refundAmount.toFixed(2)} has been refunded.`}
+          {currency} {amountCharged.toFixed(2)} has been charged from your wallet.
         </Text>
       </View>
+
+      {/* Guest: create account prompt */}
+      {isGuest && (
+        <View style={styles.guestPromptCard}>
+          <Text style={styles.guestPromptTitle}>Save Your Transaction History</Text>
+          <Text style={styles.guestPromptText}>
+            You're using Quick Dispense mode. Create a free account to track your refill history and manage your wallet.
+          </Text>
+          <TouchableOpacity
+            style={[globalStyles.primaryButton, { marginTop: 12 }]}
+            onPress={() => router.push('./create-account')}
+          >
+            <Text style={globalStyles.primaryButtonText}>Create Account</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
@@ -190,12 +216,14 @@ export default function RefuelingCompleteScreen() {
           <Text style={globalStyles.primaryButtonText}>Done</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[globalStyles.secondaryButton, { marginTop: 12 }]}
-          onPress={handleSaveReceipt}
-        >
-          <Text style={globalStyles.secondaryButtonText}>Save Receipt</Text>
-        </TouchableOpacity>
+        {!isGuest && (
+          <TouchableOpacity
+            style={[globalStyles.secondaryButton, { marginTop: 12 }]}
+            onPress={handleSaveReceipt}
+          >
+            <Text style={globalStyles.secondaryButtonText}>View Transaction History</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={{ height: 40 }} />
@@ -209,8 +237,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   successHeader: {
     alignItems: 'center',
@@ -230,7 +258,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  successIcon: {
+  successIcon: {  // kept for compatibility
     fontSize: 48,
     color: '#fff',
     fontWeight: 'bold',
@@ -372,11 +400,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
-  infoIcon: {
+  infoIcon: {  // kept for compatibility
     fontSize: 20,
     marginRight: 12,
     color: '#3B82F6',
   },
+  infoIconStyle: { marginRight: 12, marginTop: 1 },
   infoText: {
     flex: 1,
     fontSize: 14,
@@ -388,5 +417,59 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     alignSelf: 'center',
     width: '100%',
+  },
+  refundBanner: {
+    backgroundColor: '#D1FAE5',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#10B981',
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  refundBannerIcon: {  // kept for compatibility
+    fontSize: 32,
+    marginRight: 12,
+  },
+  refundBannerIconStyle: { marginRight: 12 },
+  refundBannerContent: {
+    flex: 1,
+  },
+  refundBannerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  refundBannerSubtitle: {
+    fontSize: 13,
+    color: '#047857',
+    lineHeight: 18,
+  },
+  guestPromptCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  guestPromptTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    marginBottom: 8,
+  },
+  guestPromptText: {
+    fontSize: 14,
+    color: '#1E3A8A',
+    lineHeight: 20,
   },
 });

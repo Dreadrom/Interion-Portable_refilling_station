@@ -99,11 +99,17 @@ apiClient.interceptors.response.use(
   async (error: AxiosError<ApiResponse>) => {
     // Log error in development
     if (isDevelopment) {
-      console.error('❌ API Error:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+      const status = error.response?.status;
+      // 404s are expected in demo mode (local stations don't exist on the backend)
+      if (status === 404) {
+        console.warn('⚠️ API 404 (demo fallback will apply):', error.config?.url);
+      } else {
+        console.error('❌ API Error:', {
+          url: error.config?.url,
+          status,
+          data: error.response?.data,
+        });
+      }
     }
     
     // Handle 401 - Token expired, logout user

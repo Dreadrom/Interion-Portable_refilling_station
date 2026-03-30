@@ -2,7 +2,7 @@
  * Station API
  */
 
-import { get } from './client';
+import { get, post } from './client';
 import {
   Station,
   StationDetail,
@@ -30,4 +30,25 @@ export async function getStationStatus(id: string): Promise<{
   currentTransaction?: string;
 }> {
   return get(API_ENDPOINTS.STATION_STATUS(id));
+}
+
+/**
+ * Report a low-tank alarm to the backend.
+ * The backend forwards this to the owner via SNS/SES so they can
+ * dispatch a tanker to refill the station.
+ */
+export async function reportLowTankAlarm(stationId: string, payload: {
+  tankId: string;
+  product: string;
+  levelLitres: number;
+  capacityLitres: number;
+  percentFull: number;
+}): Promise<void> {
+  return post(API_ENDPOINTS.STATION_ALARM(stationId), {
+    code: 'TANK_LOW',
+    severity: 'WARNING',
+    message: `${payload.product} tank at ${payload.percentFull.toFixed(0)}% capacity (${payload.levelLitres} L remaining). Dispatch tanker for refill.`,
+    details: payload,
+    triggeredAt: new Date().toISOString(),
+  });
 }

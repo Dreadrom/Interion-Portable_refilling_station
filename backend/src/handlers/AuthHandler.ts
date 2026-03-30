@@ -71,6 +71,14 @@ export async function handler(
       return await handleLogout(event);
     }
 
+    if (path === '/auth/send-otp' && method === 'POST') {
+      return await handleSendOtp(event);
+    }
+
+    if (path === '/auth/verify-otp' && method === 'POST') {
+      return await handleVerifyOtp(event);
+    }
+
     if (path === '/user/update' && method === 'POST') {
       return await handleUpdateProfile(event);
     }
@@ -380,7 +388,7 @@ async function handleUpdateProfile(
   }
 
   const body = JSON.parse(event.body || '{}');
-  const { name, phone } = body;
+  const { name, phone, email } = body;
 
   // Update user
   const updates: string[] = [];
@@ -395,6 +403,19 @@ async function handleUpdateProfile(
   if (phone !== undefined) {
     updates.push(`UserPhone = $${paramCount++}`);
     params.push(phone || null);
+  }
+
+  if (email) {
+    // Check if email is already taken by another user
+    const existingUser = await queryOne<User>(
+      'SELECT userid FROM Users WHERE UserEmail = $1 AND UserID != $2',
+      [email, payload.userId]
+    );
+    if (existingUser) {
+      return errorResponse('CONFLICT', 'Email address is already in use', 409);
+    }
+    updates.push(`UserEmail = $${paramCount++}`);
+    params.push(email);
   }
 
   if (updates.length === 0) {
@@ -497,5 +518,123 @@ async function handleLogout(
   // For now, just return success
   return successResponse({
     message: 'Successfully logged out',
+  });
+}
+
+/**
+ * Send OTP to a phone number for phone-based login
+ */
+async function handleSendOtp(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const body = JSON.parse(event.body || '{}');
+  const { phone } = body;
+
+  if (!phone) {
+    return validationError('Phone number is required');
+  }
+
+  // Normalise: accept 01x or +601x formats
+  const normalised = phone.startsWith('+60') ? phone : `+60${phone.replace(/^0/, '')}`;
+
+  // Generate a 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+  // Invalidate any existing unused OTPs for this phone
+  await query(
+    `UPDATE PhoneOTPs SET Used = TRUE WHERE Phone = $1 AND Used = FALSE`,
+    [normalised]
+  );
+
+  // Store new OTP
+  await query(
+    `INSERT INTO PhoneOTPs (OTPId, Phone, OTPCode, ExpiresAt) VALUES ($1, $2, $3, $4)`,
+    [uuidv4(), normalised, otp, expiresAt.toISOString()]
+  );
+
+  // TODO: Integrate real SMS gateway (e.g. Twilio, AWS SNS) here
+  // For now, log OTP and return success (demo mode)
+  console.log(`[OTP] Phone: ${normalised}, Code: ${otp}, Expires: ${expiresAt.toISOString()}`);
+
+  return successResponse({ message: 'OTP sent successfully', demo: otp });
+}
+
+/**
+ * Verify OTP and log in or register the user
+ */
+async function handleVerifyOtp(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const body = JSON.parse(event.body || '{}');
+  const { phone, otp, name } = body;
+
+  if (!phone || !otp) {
+    return validationError('Phone and OTP are required');
+  }
+
+  const normalised = phone.startsWith('+60') ? phone : `+60${phone.replace(/^0/, '')}`;
+
+  // Find the most recent valid, unused OTP for this phone
+  const record = await queryOne<{ otpid: string; otpcode: string; expiresat: string }>(
+    `SELECT OTPId, OTPCode, ExpiresAt FROM PhoneOTPs
+     WHERE Phone = $1 AND Used = FALSE AND ExpiresAt > NOW()
+     ORDER BY CreatedAt DESC LIMIT 1`,
+    [normalised]
+  );
+
+  if (!record || record.otpcode !== otp) {
+    return unauthorizedError('Invalid or expired OTP');
+  }
+
+  // Mark OTP as used
+  await query(`UPDATE PhoneOTPs SET Used = TRUE WHERE OTPId = $1`, [record.otpid]);
+
+  // Check if a user with this phone already exists
+  let user = await queryOne<User>(
+    `SELECT * FROM Users WHERE UserPhone = $1`,
+    [normalised]
+  );
+
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    // Create a new user. Use synthetic email to satisfy UNIQUE constraint.
+    const syntheticEmail = `phone_${normalised.replace('+', '')}@interion.local`;
+    const userId = uuidv4();
+    const randomPassword = await bcrypt.hash(uuidv4(), 10);
+    const displayName = name || `Driver ${normalised.slice(-4)}`;
+
+    await query(
+      `INSERT INTO Users (UserID, UserEmail, UserPassword, UserName, UserPhone, UserRole)
+       VALUES ($1, $2, $3, $4, $5, 'DRIVER')`,
+      [userId, syntheticEmail, randomPassword, displayName, normalised]
+    );
+
+    user = await queryOne<User>(`SELECT * FROM Users WHERE UserID = $1`, [userId]);
+  }
+
+  if (!user) {
+    return internalError('Failed to create or retrieve user');
+  }
+
+  const token = generateToken({
+    userId: user.userid,
+    email: user.useremail,
+    role: user.userrole,
+  });
+
+  return successResponse({
+    token,
+    expiresIn: getExpiresIn(),
+    isNewUser,
+    user: {
+      id: user.userid,
+      email: user.useremail,
+      name: user.username,
+      phone: user.userphone,
+      role: user.userrole,
+    },
   });
 }

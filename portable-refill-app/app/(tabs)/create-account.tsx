@@ -5,37 +5,23 @@ import { globalStyles } from '../../src/styles/globalStyles';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 
 export default function CreateAccountScreen() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { register, isLoading } = useAuthStore();
 
-  const handleSendVerification = () => {
-    // SEND VERIFICATION CODE TO 'email'
+  const handleContinue = () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
-    
-    setStep(2);
-  };
-
-  const handleVerifyCode = () => {
-    if (!verificationCode) {
-      Alert.alert('Error', 'Please enter the verification code');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-    
-    // check verification code correct
-    setStep(3);
-  };
-
-  const handleResendCode = () => {
-    Alert.alert('Resend Code', `Resending code to: ${email}`);
-    // resend verification code to 'email'
+    setStep(2);
   };
 
   const handleRegister = async () => {
@@ -59,7 +45,7 @@ export default function CreateAccountScreen() {
 
   return (
     <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>Interion Portable Refill App</Text>
+      <Text style={globalStyles.title}>AceRev Refill Kiosk</Text>
       <Text style={globalStyles.subtitle}>Create Account</Text>
 
       {step === 1 && (
@@ -76,7 +62,7 @@ export default function CreateAccountScreen() {
 
           <TouchableOpacity
             style={globalStyles.primaryButton}
-            onPress={handleSendVerification}
+            onPress={handleContinue}
             disabled={isLoading}
           >
             <Text style={globalStyles.primaryButtonText}>Continue</Text>
@@ -85,31 +71,6 @@ export default function CreateAccountScreen() {
       )}
 
       {step === 2 && (
-        <>
-          <TextInput
-            placeholder="Enter verification code"
-            style={globalStyles.input}
-            value={verificationCode}
-            onChangeText={setVerificationCode}
-            keyboardType="number-pad"
-            editable={!isLoading}
-          />
-
-          <TouchableOpacity onPress={handleResendCode} disabled={isLoading}>
-            <Text style={globalStyles.resend}>Resend code</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={globalStyles.primaryButton}
-            onPress={handleVerifyCode}
-            disabled={isLoading}
-          >
-            <Text style={globalStyles.primaryButtonText}>Continue</Text>
-          </TouchableOpacity>
-        </>
-      )}
-
-      {step === 3 && (
         <>
           <TextInput
             placeholder="Enter your name"
@@ -143,7 +104,7 @@ export default function CreateAccountScreen() {
             disabled={isLoading}
           >
             <Text style={globalStyles.primaryButtonText}>
-              {isLoading ? 'Creating Account...' : 'Continue'}
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Text>
           </TouchableOpacity>
         </>

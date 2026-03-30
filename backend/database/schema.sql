@@ -87,3 +87,48 @@ VALUES (
     'System Admin',
     'ADMIN'
 ) ON CONFLICT (UserID) DO NOTHING;
+
+-- ============================================
+-- Phone OTPs Table (for phone-number login)
+-- ============================================
+CREATE TABLE IF NOT EXISTS PhoneOTPs (
+    OTPId VARCHAR(36) PRIMARY KEY,
+    Phone VARCHAR(20) NOT NULL,
+    OTPCode VARCHAR(6) NOT NULL,
+    ExpiresAt TIMESTAMP NOT NULL,
+    Used BOOLEAN DEFAULT FALSE,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_phoneotps_phone ON PhoneOTPs(Phone);
+
+-- ============================================
+-- Bank Accounts Table (for wallet cash-out)
+-- ============================================
+CREATE TABLE IF NOT EXISTS BankAccounts (
+    AccountID VARCHAR(36) PRIMARY KEY,
+    UserID VARCHAR(36) NOT NULL,
+    AccountHolderName VARCHAR(255) NOT NULL,
+    BankName VARCHAR(100) NOT NULL,
+    AccountNumber VARCHAR(50) NOT NULL,
+    DuitNowPhone VARCHAR(20),
+    IsDuitNow BOOLEAN DEFAULT FALSE,
+    IsDefault BOOLEAN DEFAULT FALSE,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_bankaccounts_user ON BankAccounts(UserID);
+
+DROP TRIGGER IF EXISTS update_bankaccounts_updated_at ON BankAccounts;
+CREATE TRIGGER update_bankaccounts_updated_at
+    BEFORE UPDATE ON BankAccounts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- NOTE: To support phone-only users, run this migration on the live DB:
+--   ALTER TABLE Users ALTER COLUMN UserEmail DROP NOT NULL;
+--   ALTER TABLE Users ADD COLUMN IF NOT EXISTS WalletBalance NUMERIC(10,2) DEFAULT 0;
+-- ============================================

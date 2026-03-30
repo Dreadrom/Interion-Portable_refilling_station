@@ -90,7 +90,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>Interion Portable Refill App</Text>
+      <Text style={globalStyles.title}>AceRev Refill Kiosk</Text>
       <Text style={globalStyles.subtitle}>Forgot Password</Text>
 
       {step === 1 && (

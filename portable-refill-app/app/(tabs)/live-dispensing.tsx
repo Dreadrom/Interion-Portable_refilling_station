@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -10,15 +11,20 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, ProductType } from '../../src/types';
 import { transactionStore } from '../../src/utils/transactionStore';
+import { useAuthStore } from '../../src/stores/useAuthStore';
+import { getDemoStationById, deductDemoStationVolume } from '../../src/data/demoStations';
 
 type DispenseStatus = 'IDLE' | 'IN_PROGRESS' | 'COMPLETED' | 'STOPPED' | 'EMERGENCY_STOPPED';
 
 export default function LiveDispensingScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { topUpBalance, user } = useAuthStore();
   const [station, setStation] = useState<StationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<DispenseStatus>('IN_PROGRESS'); // Start dispensing immediately
@@ -32,15 +38,21 @@ export default function LiveDispensingScreen() {
   // Use ref to store timer so we can clear it
   const dispensingTimerRef = useRef<number | null>(null);
 
+  // Live-value refs — always current, avoids stale-closure in async handlers
+  const volumeRef = useRef(0);
+  const amountRef = useRef(0);
+  const elapsedRef = useRef(0);
+
   const stationId = params.stationId as string;
   const product = params.product as ProductType;
   const presetType = params.presetType as string;
   const presetValue = parseFloat(params.presetValue as string);
   const holdAmount = params.holdAmount as string;
+  const holdAmountRaw = parseFloat(params.holdAmountRaw as string) || 0;
   const nozzle = params.nozzle as string;
 
   // Get unit price from station data
-  const [unitPrice, setUnitPrice] = useState(2.05);
+  const [unitPrice, setUnitPrice] = useState(10.00); // AdBlue default
 
   useEffect(() => {
     loadStationInfo();
@@ -70,7 +82,13 @@ export default function LiveDispensingScreen() {
         setUnitPrice(pricing.unitPrice);
       }
     } catch (err: any) {
-      console.error('Failed to load station:', err);
+      const demo = getDemoStationById(stationId);
+      if (demo) {
+        setStation(demo);
+        const pricing = demo.pricing?.find(p => p.product === product);
+        if (pricing) setUnitPrice(pricing.unitPrice);
+      }
+      // Silently fall back — no error shown in demo mode
     } finally {
       setLoading(false);
     }
@@ -95,29 +113,28 @@ export default function LiveDispensingScreen() {
 
   const simulateDispensing = () => {
     const targetVolume = presetType === 'VOLUME' ? presetValue : presetValue / unitPrice;
-    const dispensingRate = 0.08; // 0.08 liters per interval (realistic pump rate)
-    const interval = 100; // Update every 100ms
+    const dispensingRate = 0.08; // 0.08 litres per interval (realistic pump rate)
+    const interval = 100; // ms
 
     dispensingTimerRef.current = setInterval(() => {
-      setVolumeDispensed((prev) => {
-        const newVolume = prev + dispensingRate;
-        
-        // Check if target reached
-        if (newVolume >= targetVolume) {
-          if (dispensingTimerRef.current) {
-            clearInterval(dispensingTimerRef.current);
-          }
-          setVolumeDispensed(targetVolume);
-          setAmountCharged(targetVolume * unitPrice);
-          handleDispenseComplete();
-          return targetVolume;
-        }
-        
-        return newVolume;
-      });
+      const newVolume = Math.min(volumeRef.current + dispensingRate, targetVolume);
+      const newAmount = newVolume * unitPrice;
+      const newElapsed = elapsedRef.current + interval;
 
-      setAmountCharged((prev) => prev + (dispensingRate * unitPrice));
-      setElapsedTime((prev) => prev + interval);
+      // Keep refs in sync — handleDispenseComplete reads these, not stale state
+      volumeRef.current = newVolume;
+      amountRef.current = newAmount;
+      elapsedRef.current = newElapsed;
+
+      setVolumeDispensed(newVolume);
+      setAmountCharged(newAmount);
+      setElapsedTime(newElapsed);
+
+      if (newVolume >= targetVolume) {
+        clearInterval(dispensingTimerRef.current!);
+        dispensingTimerRef.current = null;
+        handleDispenseComplete('TARGET_REACHED');
+      }
     }, interval);
   };
 
@@ -138,6 +155,24 @@ export default function LiveDispensingScreen() {
           text: 'Start',
           onPress: () => {
             setStatus('IN_PROGRESS');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleTankFull = () => {
+    Alert.alert(
+      'Vehicle Tank Full',
+      "The vehicle's tank is full. The pump will stop and the unused hold will be refunded to your wallet.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Stop Pump',
+          onPress: () => {
+            stopDispensing();
+            setStatus('STOPPED');
+            setTimeout(() => handleDispenseComplete('TANK_FULL'), 300);
           },
         },
       ]
@@ -165,7 +200,7 @@ export default function LiveDispensingScreen() {
 
   const handleEmergencyStop = () => {
     Alert.alert(
-      '⚠️ EMERGENCY STOP',
+      'EMERGENCY STOP',
       'This will immediately stop all dispensing. Use only in case of emergency!',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -182,30 +217,53 @@ export default function LiveDispensingScreen() {
     );
   };
 
-  const handleDispenseComplete = (reason: string = 'TARGET_REACHED') => {
+  const handleDispenseComplete = async (reason: string = 'TARGET_REACHED') => {
     stopDispensing(); // Ensure timer is cleared
     setStatus('COMPLETED');
-    
-    // Store transaction securely
-    const transactionId = transactionStore.storeTransaction({
+
+    // Always read from refs — state may be stale when called from inside a setInterval tick
+    const actualVolume = parseFloat(volumeRef.current.toFixed(2));
+    const actualCharged = parseFloat(amountRef.current.toFixed(2));
+    const actualElapsed = elapsedRef.current;
+
+    // Refund the unused portion of the hold back to wallet
+    const refundAmount = Math.max(0, holdAmountRaw - actualCharged);
+    if (refundAmount > 0.01) {
+      try {
+        await topUpBalance(refundAmount);
+      } catch (e) {
+        console.warn('Failed to refund excess to wallet:', e);
+      }
+    }
+
+    // Update demo station tank level so the Nearby Stations list reflects the change
+    if (stationId.startsWith('demo-')) {
+      deductDemoStationVolume(stationId, actualVolume);
+    }
+
+    // Persist transaction to history
+    const transactionId = await transactionStore.storeTransaction({
       stationName: station?.name || 'Station',
       product: product,
       nozzle: nozzle,
-      volumeDispensed: parseFloat(volumeDispensed.toFixed(2)),
-      amountCharged: parseFloat(amountCharged.toFixed(2)),
+      volumeDispensed: actualVolume,
+      amountCharged: actualCharged,
+      refundAmount: refundAmount,
       unitPrice: parseFloat(unitPrice.toFixed(2)),
       currency: getSelectedPrice()?.currency || 'MYR',
       holdAmount: holdAmount,
-      elapsedTime: formatTime(elapsedTime),
+      elapsedTime: formatTime(actualElapsed),
       stopReason: reason,
     });
-    
-    // Navigate with only the transaction ID
+
+    // Navigate with transaction ID and refund info
     setTimeout(() => {
       router.push({
         pathname: './refueling-complete',
         params: {
           transactionId,
+          refundAmount: refundAmount.toFixed(2),
+          currency: getSelectedPrice()?.currency || 'MYR',
         },
       });
     }, 500);
@@ -244,24 +302,24 @@ export default function LiveDispensingScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       {/* Status Header */}
       <View style={styles.statusHeader}>
         {status === 'IN_PROGRESS' && (
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <View style={styles.statusIconContainer}>
-              <Text style={styles.statusIcon}>⛽</Text>
+              <Ionicons name="water" size={40} color="#fff" />
             </View>
           </Animated.View>
         )}
         {(status === 'COMPLETED' || status === 'STOPPED') && (
           <View style={[styles.statusIconContainer, styles.statusIconComplete]}>
-            <Text style={styles.statusIcon}>✓</Text>
+            <Ionicons name="checkmark" size={40} color="#fff" />
           </View>
         )}
         {status === 'EMERGENCY_STOPPED' && (
           <View style={[styles.statusIconContainer, styles.statusIconEmergency]}>
-            <Text style={styles.statusIcon}>⚠️</Text>
+            <Ionicons name="alert" size={40} color="#fff" />
           </View>
         )}
         
@@ -333,7 +391,7 @@ export default function LiveDispensingScreen() {
 
       {/* Wallet Hold Info */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>💳 Wallet Hold</Text>
+        <Text style={styles.cardTitle}>Wallet Hold</Text>
         
         <View style={styles.holdRow}>
           <Text style={styles.holdLabel}>Hold Amount:</Text>
@@ -354,6 +412,13 @@ export default function LiveDispensingScreen() {
           </Text>
         </View>
 
+        <View style={styles.holdRow}>
+          <Text style={styles.holdLabel}>Wallet Balance:</Text>
+          <Text style={[styles.holdValue, { color: '#10B981', fontWeight: '700' }]}>
+            {getSelectedPrice()?.currency} {(user?.walletBalance ?? 0).toFixed(2)}
+          </Text>
+        </View>
+
         <Text style={styles.holdNote}>
           ⓘ Unused hold amount will be released after transaction
         </Text>
@@ -371,10 +436,20 @@ export default function LiveDispensingScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={[globalStyles.secondaryButton, styles.tankFullButton]}
+              onPress={handleTankFull}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="checkmark-done-circle-outline" size={18} color="#4338CA" />
+                <Text style={styles.tankFullButtonText}>Vehicle Tank Full</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[globalStyles.secondaryButton, styles.emergencyButton]}
               onPress={handleEmergencyStop}
             >
-              <Text style={styles.emergencyButtonText}>🚨 EMERGENCY STOP</Text>
+              <Text style={styles.emergencyButtonText}>EMERGENCY STOP</Text>
             </TouchableOpacity>
           </>
         )}
@@ -400,8 +475,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,
@@ -619,6 +694,16 @@ const styles = StyleSheet.create({
   stopButton: {
     backgroundColor: '#F59E0B',
     marginBottom: 12,
+  },
+  tankFullButton: {
+    borderWidth: 2,
+    borderColor: '#6366F1',
+    marginBottom: 12,
+  },
+  tankFullButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6366F1',
   },
   emergencyButton: {
     backgroundColor: '#EF4444',

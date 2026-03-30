@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   ScrollView,
@@ -9,12 +9,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 import { updateProfile } from '../../src/api/auth';
+import { transactionStore } from '../../src/utils/transactionStore';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -22,10 +26,14 @@ export default function ProfileScreen() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [txnCount, setTxnCount] = useState(0);
+
+  useEffect(() => {
+    transactionStore.getAllTransactions().then((list) => setTxnCount(list.length));
+  }, []);
 
   const memberSince = user ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
-  const walletBalance = 501.90;
-  const totalTransactions = 47;
+  const walletBalance = user?.walletBalance ?? 0;
   const currency = 'MYR';
 
   const handleSave = async () => {
@@ -42,7 +50,10 @@ export default function ProfileScreen() {
     setProcessing(true);
 
     try {
-      await updateProfile({ name, email, phone: phone || undefined });
+      const updatedData = await updateProfile({ name, email, phone: phone || undefined });
+      if (user) {
+        await updateUser({ ...user, name, phone: phone || undefined });
+      }
       Alert.alert('Success', 'Your profile has been updated successfully.');
       setIsEditing(false);
     } catch (error: any) {
@@ -60,22 +71,12 @@ export default function ProfileScreen() {
   };
 
   const handleChangePassword = () => {
-    Alert.alert(
-      'Change Password',
-      'You will be redirected to change your password.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Continue', onPress: () => {
-          // Navigate to change password screen
-          Alert.alert('Info', 'Change password screen would be implemented here.');
-        }},
-      ]
-    );
+    router.push('./change-password');
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '⚠️ Delete Account',
+      'Delete Account',
       'This action cannot be undone. All your data will be permanently deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -91,7 +92,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
@@ -108,7 +109,7 @@ export default function ProfileScreen() {
           <Text style={styles.statLabel}>Wallet Balance</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{totalTransactions}</Text>
+          <Text style={styles.statValue}>{txnCount}</Text>
           <Text style={styles.statLabel}>Transactions</Text>
         </View>
       </View>
@@ -116,10 +117,10 @@ export default function ProfileScreen() {
       {/* Personal Information */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Personal Information</Text>
+          <Text style={[styles.cardTitle, { marginBottom: 0, flex: 1 }]}>Personal Information</Text>
           {!isEditing && (
             <View style={styles.headerButtons}>
-              <TouchableOpacity onPress={handleChangePassword} style={{ marginRight: 16 }}>
+              <TouchableOpacity onPress={handleChangePassword} style={{ marginRight: 14 }}>
                 <Text style={styles.editButton}>Change Password</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setIsEditing(true)}>
@@ -189,18 +190,52 @@ export default function ProfileScreen() {
 
       {/* Actions */}
       <View style={styles.card}>
-        <TouchableOpacity
-          style={globalStyles.secondaryButton}
-          onPress={() => Alert.alert('Info', 'Transaction history would be displayed here.')}
-        >
-          <Text style={globalStyles.secondaryButtonText}>Transaction History</Text>
+        <Text style={styles.cardTitle}>Account</Text>
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('./transaction-history')}>
+          <View style={styles.actionIconBox}>
+            <Ionicons name="time-outline" size={20} color="#10B981" />
+          </View>
+          <Text style={styles.actionLabel}>Transaction History</Text>
+          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[globalStyles.primaryButton, { marginTop: 12 }]}
-          onPress={() => router.push('./home')}
-        >
-          <Text style={globalStyles.primaryButtonText}>Return to Home</Text>
+        <View style={styles.actionDivider} />
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('./bank-account')}>
+          <View style={styles.actionIconBox}>
+            <Ionicons name="card-outline" size={20} color="#10B981" />
+          </View>
+          <Text style={styles.actionLabel}>Bank Accounts &amp; DuitNow</Text>
+          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+        </TouchableOpacity>
+
+        <View style={styles.actionDivider} />
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('./wallet-cashout')}>
+          <View style={styles.actionIconBox}>
+            <Ionicons name="arrow-up-circle-outline" size={20} color="#10B981" />
+          </View>
+          <Text style={styles.actionLabel}>Cash Out Wallet</Text>
+          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+        </TouchableOpacity>
+
+        <View style={styles.actionDivider} />
+
+        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('./home')}>
+          <View style={styles.actionIconBox}>
+            <Ionicons name="home-outline" size={20} color="#10B981" />
+          </View>
+          <Text style={styles.actionLabel}>Return to Home</Text>
+          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Danger Zone */}
+      <View style={[styles.card, styles.dangerCard]}>
+        <TouchableOpacity style={styles.dangerRow} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Text style={styles.dangerLabel}>Delete Account</Text>
         </TouchableOpacity>
       </View>
 
@@ -215,8 +250,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
@@ -242,13 +277,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
   },
   statsContainer: {
@@ -272,8 +307,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#10B981',
     marginBottom: 4,
   },
@@ -300,6 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
   headerButtons: {
     flexDirection: 'row',
@@ -312,9 +348,50 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   editButton: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: '#3B82F6',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  actionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  actionLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  actionDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginLeft: 50,
+  },
+  dangerCard: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  dangerLabel: {
+    fontSize: 15,
+    color: '#EF4444',
+    fontWeight: '500',
   },
   fieldGroup: {
     marginBottom: 16,

@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   createdAt: string;
   updatedAt?: string;
+  walletBalance?: number;
 }
 
 export interface LoginRequest {
@@ -52,3 +53,21 @@ export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
 }
+
+export interface BankAccount {
+  id: string;
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  isDuitNow: boolean;
+  duitNowPhone?: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export const MALAYSIA_BANKS = [
+  'Maybank', 'CIMB Bank', 'Public Bank', 'RHB Bank',
+  'Hong Leong Bank', 'AmBank', 'Bank Rakyat', 'BSN',
+  'Bank Islam', 'Agrobank', 'Alliance Bank', 'Standard Chartered',
+  'OCBC Bank', 'UOB Malaysia', 'HSBC Malaysia',
+] as const;

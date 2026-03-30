@@ -9,11 +9,14 @@ export type StationStatus =
   | 'OFFLINE'        // Not connected
   | 'MAINTENANCE';   // Maintenance mode
 
+export type PumpStatus = 'IDLE' | 'IN_USE' | 'FAULT' | 'OFFLINE';
+
 export type ProductType = 
   | 'RON95' 
   | 'RON97' 
   | 'DIESEL' 
-  | 'PREMIUM_DIESEL';
+  | 'PREMIUM_DIESEL'
+  | 'AdBlue';
 
 export interface Station {
   id: string;
@@ -63,11 +66,20 @@ export interface Pricing {
   effectiveTo?: string;
 }
 
+export interface Pump {
+  id: string;
+  stationId: string;
+  pumpNumber: number;  // 1-indexed label shown to the user
+  status: PumpStatus;
+  lastUsed?: string;   // ISO timestamp
+}
+
 export interface StationDetail extends Station {
   tankStatus: TankStatus[];
   pricing: Pricing[];
   config?: StationConfig;
   distanceKm?: number; // Distance from user if location provided
+  pumps?: Pump[];       // Pump units at this station
 }
 
 // Request types

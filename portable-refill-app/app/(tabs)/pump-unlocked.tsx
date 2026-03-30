@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -10,15 +11,18 @@ import {
   View,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, ProductType } from '../../src/types';
+import { getDemoStationById } from '../../src/data/demoStations';
 
 export default function PumpUnlockedScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const [station, setStation] = useState<StationDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
+  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes in seconds
   const [pulseAnim] = useState(new Animated.Value(1));
 
   const stationId = params.stationId as string;
@@ -26,6 +30,7 @@ export default function PumpUnlockedScreen() {
   const presetType = params.presetType as string;
   const presetValue = params.presetValue as string;
   const holdAmount = params.holdAmount as string;
+  const holdAmountRaw = params.holdAmountRaw as string;
   const nozzle = params.nozzle || '1'; // Default nozzle 1
 
   useEffect(() => {
@@ -39,7 +44,9 @@ export default function PumpUnlockedScreen() {
       const data = await getStationById(stationId);
       setStation(data);
     } catch (err: any) {
-      console.error('Failed to load station:', err);
+      const demo = getDemoStationById(stationId);
+      if (demo) setStation(demo);
+      // else: no demo data either — station stays null, screen shows gracefully
     } finally {
       setLoading(false);
     }
@@ -91,16 +98,18 @@ export default function PumpUnlockedScreen() {
   };
 
   const handleProceedToDispense = () => {
-    // Navigate to live dispensing screen
+    // Navigate to pump authentication before starting dispense
     router.push({
-      pathname: './live-dispensing',
+      pathname: './pump-auth',
       params: {
         stationId: stationId,
         product: product,
         presetType: presetType,
         presetValue: presetValue,
         holdAmount: holdAmount,
+        holdAmountRaw: holdAmountRaw,
         nozzle: nozzle,
+        stationName: station?.name ?? '',
       },
     });
   };
@@ -155,11 +164,11 @@ export default function PumpUnlockedScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       {/* Success Header */}
       <View style={styles.successHeader}>
         <Animated.View style={[styles.successIconContainer, { transform: [{ scale: pulseAnim }] }]}>
-          <Text style={styles.successIcon}>✓</Text>
+          <Ionicons name="checkmark" size={40} color="#fff" />
         </Animated.View>
         <Text style={styles.successTitle}>Pump Unlocked!</Text>
         <Text style={styles.successSubtitle}>Your pump is ready and waiting</Text>
@@ -178,7 +187,7 @@ export default function PumpUnlockedScreen() {
 
       {/* Station & Pump Info */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>📍 Station Information</Text>
+        <Text style={styles.cardTitle}>Station Information</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Station:</Text>
           <Text style={styles.infoValue}>{station?.name}</Text>
@@ -190,7 +199,7 @@ export default function PumpUnlockedScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>⛽ Pump Assignment</Text>
+        <Text style={styles.cardTitle}>Pump Assignment</Text>
         <View style={styles.pumpContainer}>
           <Text style={styles.pumpLabel}>Nozzle Number</Text>
           <Text style={styles.pumpNumber}>{nozzle}</Text>
@@ -200,7 +209,7 @@ export default function PumpUnlockedScreen() {
 
       {/* Refill Details */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>💧 Refill Details</Text>
+        <Text style={styles.cardTitle}>Refill Details</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Product:</Text>
           <Text style={styles.infoValue}>{product}</Text>
@@ -219,7 +228,7 @@ export default function PumpUnlockedScreen() {
 
       {/* Instructions */}
       <View style={styles.instructionsCard}>
-        <Text style={styles.instructionsTitle}>📋 Instructions</Text>
+        <Text style={styles.instructionsTitle}>Instructions</Text>
         <View style={styles.instructionsList}>
           <View style={styles.instructionItem}>
             <Text style={styles.stepNumber}>1</Text>
@@ -246,7 +255,7 @@ export default function PumpUnlockedScreen() {
 
       {/* Warning */}
       <View style={styles.warningCard}>
-        <Text style={styles.warningIcon}>⚠️</Text>
+        <Ionicons name="alert-circle" size={22} color="#D97706" style={{ marginTop: 2 }} />
         <Text style={styles.warningText}>
           Do not share your nozzle number with others. Only you have access to this pump during your reserved time.
         </Text>
@@ -280,8 +289,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,

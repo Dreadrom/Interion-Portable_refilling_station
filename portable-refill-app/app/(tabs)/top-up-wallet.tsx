@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -9,16 +10,33 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 const PRESET_AMOUNTS = [10, 20, 50, 100, 200, 500];
 
+type PaymentMethod = {
+  id: string;
+  label: string;
+  shortLabel: string;
+  color: string;
+  bg: string;
+};
+
+const PAYMENT_METHODS: PaymentMethod[] = [
+  { id: 'tng',  label: "Touch 'n Go eWallet", shortLabel: 'TnG', color: '#0156CC', bg: '#DBEAFE' },
+];
+
 export default function TopUpWalletScreen() {
+  const { user, topUpBalance } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [customAmount, setCustomAmount] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  const currentBalance = 501.90; // This would come from user context/state in production
+  const currentBalance = user?.walletBalance ?? 0;
   const currency = 'MYR';
 
   const handlePresetSelect = (amount: number) => {
@@ -55,23 +73,22 @@ export default function TopUpWalletScreen() {
       return;
     }
 
+    if (!selectedMethod) {
+      Alert.alert('Payment Method Required', 'Please select a payment method to continue.');
+      return;
+    }
+
+    const method = PAYMENT_METHODS.find(m => m.id === selectedMethod);
+
     setProcessing(true);
-
     try {
-      // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
-
+      await topUpBalance(amount);
       const newBalance = currentBalance + amount;
-
       Alert.alert(
         'Top-Up Successful!',
-        `${currency} ${amount.toFixed(2)} has been added to your wallet.\n\nNew Balance: ${currency} ${newBalance.toFixed(2)}`,
-        [
-          {
-            text: 'Done',
-            onPress: () => router.back(),
-          },
-        ]
+        `${currency} ${amount.toFixed(2)} added via ${method?.label}.\n\nNew Balance: ${currency} ${newBalance.toFixed(2)}`,
+        [{ text: 'Done', onPress: () => router.back() }]
       );
     } catch (error: any) {
       Alert.alert('Top-Up Failed', error.message || 'An error occurred during top-up.');
@@ -81,7 +98,7 @@ export default function TopUpWalletScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Top-Up Wallet</Text>
@@ -164,17 +181,30 @@ export default function TopUpWalletScreen() {
         </View>
       )}
 
-      {/* Payment Methods Info */}
-      <View style={styles.infoCard}>
-        <Text style={styles.infoIcon}>💳</Text>
-        <View style={styles.infoTextContainer}>
-          <Text style={styles.infoTitle}>Payment Methods</Text>
-          <Text style={styles.infoText}>
-            • Credit/Debit Card{'\n'}
-            • Online Banking{'\n'}
-            • Digital Wallets (Touch 'n Go, GrabPay)
-          </Text>
-        </View>
+      {/* Payment Methods */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Payment Method</Text>
+        {PAYMENT_METHODS.map((method) => {
+          const isSelected = selectedMethod === method.id;
+          return (
+            <TouchableOpacity
+              key={method.id}
+              style={[styles.methodRow, isSelected && styles.methodRowSelected]}
+              onPress={() => setSelectedMethod(method.id)}
+              disabled={processing}
+            >
+              <View style={[styles.methodBadge, { backgroundColor: method.bg }]}>
+                <Text style={[styles.methodBadgeText, { color: method.color }]}>{method.shortLabel}</Text>
+              </View>
+              <Text style={[styles.methodLabel, isSelected && styles.methodLabelSelected]}>
+                {method.label}
+              </Text>
+              <View style={[styles.methodRadio, isSelected && { borderColor: '#10B981', backgroundColor: '#10B981' }]}>
+                {isSelected && <Ionicons name="checkmark" size={12} color="#fff" />}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Action Buttons */}
@@ -214,21 +244,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
   },
   balanceCard: {
@@ -376,36 +406,48 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     opacity: 0.3,
   },
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  methodRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-    maxWidth: 600,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  infoIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  infoTextContainer: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 10,
     marginBottom: 4,
   },
-  infoText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 20,
+  methodRowSelected: {
+    backgroundColor: '#F0FDF4',
+  },
+  methodBadge: {
+    width: 44,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  methodBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  methodLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '400',
+  },
+  methodLabelSelected: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  methodRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buttonContainer: {
     marginTop: 8,

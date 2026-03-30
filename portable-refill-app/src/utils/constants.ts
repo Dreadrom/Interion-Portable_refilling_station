@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   STATION_DETAIL: (id: string) => `/stations/${id}`,
   STATION_TANK: (id: string) => `/stations/${id}/tank`,
   STATION_STATUS: (id: string) => `/stations/${id}/status`,
+  STATION_ALARM: (id: string) => `/stations/${id}/alarm`,
   
   // Payment
   PAYMENT_CREATE: '/payment/create',
@@ -51,11 +52,11 @@ export const API_ENDPOINTS = {
  * Storage keys for AsyncStorage
  */
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: '@auth_token',
-  REFRESH_TOKEN: '@refresh_token',
-  USER: '@user',
-  LAST_STATION: '@last_station',
-  SETTINGS: '@settings',
+  AUTH_TOKEN: 'auth_token',
+  REFRESH_TOKEN: 'refresh_token',
+  USER: 'user_data',
+  LAST_STATION: 'last_station',
+  SETTINGS: 'app_settings',
 } as const;
 
 /**

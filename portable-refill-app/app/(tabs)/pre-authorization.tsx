@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
@@ -9,12 +10,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { getStationById } from '../../src/api/stations';
 import { StationDetail, ProductType } from '../../src/types';
+import { useAuthStore } from '../../src/stores/useAuthStore';
+import { getDemoStationById } from '../../src/data/demoStations';
 
 export default function PreAuthorizationScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const { user, deductBalance, topUpBalance } = useAuthStore();
   const [station, setStation] = useState<StationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [authorizing, setAuthorizing] = useState(false);
@@ -34,7 +40,11 @@ export default function PreAuthorizationScreen() {
       const data = await getStationById(stationId);
       setStation(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load station');
+      const demo = getDemoStationById(stationId);
+      if (demo) {
+        setStation(demo);
+      }
+      // Silently ignore error when demo fallback succeeds
     } finally {
       setLoading(false);
     }
@@ -64,19 +74,32 @@ export default function PreAuthorizationScreen() {
   };
 
   const handleAuthorize = async () => {
+    const estimate = calculateEstimate();
+    const holdAmount = estimate.amount;
+    const walletBalance = user?.walletBalance ?? 0;
+
+    if (walletBalance < holdAmount) {
+      Alert.alert(
+        'Insufficient Wallet Balance',
+        `You need at least ${getSelectedPrice()?.currency ?? 'MYR'} ${holdAmount.toFixed(2)} in your wallet to proceed.\n\nYour balance: ${getSelectedPrice()?.currency ?? 'MYR'} ${walletBalance.toFixed(2)}\n\nPlease top up your wallet first.`,
+        [
+          { text: 'Top Up', onPress: () => router.push('./top-up-wallet') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
     setAuthorizing(true);
     
     try {
-      // Simulate wallet hold/pre-authorization
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Deduct hold amount from wallet
+      await deductBalance(holdAmount);
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const estimate = calculateEstimate();
-      const holdAmount = estimate.amount * 1.1; // 10% buffer
+      const assignedNozzle = Math.floor(Math.random() * 4) + 1;
       
-      // Simulate pump assignment (in real scenario, this would come from the backend)
-      const assignedNozzle = Math.floor(Math.random() * 4) + 1; // Random nozzle 1-4
-      
-      // Navigate to pump unlocked screen
       router.push({
         pathname: './pump-unlocked',
         params: {
@@ -85,6 +108,7 @@ export default function PreAuthorizationScreen() {
           presetType: refillType.toUpperCase(),
           presetValue: refillValue,
           holdAmount: `${getSelectedPrice()?.currency} ${holdAmount.toFixed(2)}`,
+          holdAmountRaw: holdAmount.toFixed(2),
           nozzle: assignedNozzle.toString(),
         },
       });
@@ -120,10 +144,10 @@ export default function PreAuthorizationScreen() {
 
   const estimate = calculateEstimate();
   const price = getSelectedPrice();
-  const holdAmount = estimate.amount * 1.1; // 10% buffer for pre-authorization
+  const holdAmount = estimate.amount;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Pre-Authorization</Text>
         <Text style={styles.subtitle}>Confirm your refill and reserve a pump</Text>
@@ -166,27 +190,40 @@ export default function PreAuthorizationScreen() {
       </View>
 
       <View style={[styles.card, styles.authCard]}>
-        <Text style={styles.cardTitle}>💳 Wallet Hold</Text>
+        <View style={styles.cardTitleRow}>
+          <Ionicons name="wallet-outline" size={18} color="#059669" />
+          <Text style={styles.cardTitle}>Wallet Hold</Text>
+        </View>
         <Text style={styles.authDescription}>
-          We'll temporarily hold the amount below in your wallet. You'll only be charged for the actual amount dispensed.
+          We'll deduct this amount from your wallet now to unlock the pump. After dispensing, you'll only be charged for what you actually pumped — the rest is instantly returned to your wallet.
         </Text>
 
         <View style={styles.holdAmountContainer}>
-          <Text style={styles.holdLabel}>Hold Amount:</Text>
+          <Text style={styles.holdLabel}>Authorized Amount:</Text>
           <Text style={styles.holdAmount}>
-            {price?.currency} {holdAmount.toFixed(2)}
+            {price?.currency} {estimate.amount.toFixed(2)}
           </Text>
         </View>
 
-        <Text style={styles.holdNote}>
-          ⓘ Includes 10% buffer. Excess will be released after dispensing.
-        </Text>
+        <View style={styles.walletBalanceRow}>
+          <Text style={styles.walletBalanceLabel}>Your Wallet Balance:</Text>
+          <Text style={[
+            styles.walletBalanceValue,
+            (user?.walletBalance ?? 0) < holdAmount && styles.walletBalanceLow,
+          ]}>
+            {price?.currency} {(user?.walletBalance ?? 0).toFixed(2)}
+            {(user?.walletBalance ?? 0) < holdAmount ? '  Low' : '  OK'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.warningCard}>
-        <Text style={styles.warningTitle}>⚠️ Important</Text>
+        <View style={styles.warningTitleRow}>
+          <Ionicons name="alert-circle-outline" size={18} color="#92400E" />
+          <Text style={styles.warningTitle}>Important</Text>
+        </View>
         <Text style={styles.warningText}>
-          • A pump will be reserved for 5 minutes{'\n'}
+          • A pump will be reserved for 10 minutes{'\n'}
           • Please proceed to the station immediately{'\n'}
           • Authorization will be cancelled if not used
         </Text>
@@ -235,8 +272,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   contentContainer: {
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,
@@ -279,6 +316,24 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 12,
     letterSpacing: 0.5,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  warningTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  holdNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 4,
   },
   stationName: {
     fontSize: 18,
@@ -344,6 +399,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#059669',
     textAlign: 'center',
+  },
+  walletBalanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    width: '100%',
+  },
+  walletBalanceLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  walletBalanceValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  walletBalanceLow: {
+    color: '#EF4444',
   },
   warningCard: {
     backgroundColor: '#FEF3C7',
