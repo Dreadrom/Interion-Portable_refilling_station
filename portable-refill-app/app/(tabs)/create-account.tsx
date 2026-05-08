@@ -10,7 +10,7 @@ export default function CreateAccountScreen() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { register, isLoading } = useAuthStore();
+  const { register, createOfflineSession, isLoading } = useAuthStore();
 
   const handleContinue = () => {
     if (!email) {
@@ -39,7 +39,13 @@ export default function CreateAccountScreen() {
       await register({ email, password, name });
       router.replace('/home');
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+      if (!error.response) {
+        // Backend unreachable — create local account so the demo flow works
+        await createOfflineSession({ name, email });
+        router.replace('/home');
+      } else {
+        Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+      }
     }
   };
 

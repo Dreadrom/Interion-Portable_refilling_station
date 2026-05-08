@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 
 interface EnvConfig {
   apiBaseUrl: string;
+  wsBaseUrl: string;
   apiTimeout: number;
   fiuuEnv: 'sandbox' | 'production';
   appEnv: 'development' | 'staging' | 'production';
@@ -27,6 +28,8 @@ function getEnvVar(key: string, defaultValue: string = ''): string {
  */
 export const env: EnvConfig = {
   apiBaseUrl: getEnvVar('API_BASE_URL', 'https://api.example.com'),
+  // WebSocket API Gateway URL — e.g. wss://abc123.execute-api.ap-southeast-1.amazonaws.com/prod
+  wsBaseUrl: getEnvVar('WS_API_URL', ''),
   apiTimeout: parseInt(getEnvVar('API_TIMEOUT', '30000'), 10),
   fiuuEnv: getEnvVar('FIUU_ENV', 'sandbox') as 'sandbox' | 'production',
   appEnv: getEnvVar('APP_ENV', 'development') as 'development' | 'staging' | 'production',

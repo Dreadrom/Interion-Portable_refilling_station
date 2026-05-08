@@ -1,0 +1,34 @@
+# AceRev Refill Kiosk — Hardware Gateway Service
+# Python 3.11+ required
+# Run:  pip install -r requirements.txt
+
+# AWS IoT Core (MQTT with mTLS)
+awsiotsdk >= 1.21.0
+
+# HTTP server for local diagnostics API
+flask >= 3.0.0
+
+# Environment variable loading
+python-dotenv >= 1.0.0
+
+# Structured logging
+structlog >= 24.1.0
+
+# ── Hardware libraries (install only when hardware is confirmed) ─────────────
+# Siemens S7 PLC communication (S7-1200 / S7-1500)
+# python-snap7 >= 1.3
+#
+# Modbus TCP/RTU (alternative/universal PLC interface)
+# pymodbus >= 3.6.0
+#
+# Raspberry Pi GPIO (direct relay/solenoid control, no PLC)
+# RPi.GPIO >= 0.7.1          # legacy, simpler
+# gpiozero >= 2.0            # modern, recommended
+#
+# I2C OLED display (SSD1306, 128×64)
+# adafruit-circuitpython-ssd1306 >= 2.12.0
+# Pillow >= 10.0.0           # for text rendering on OLED
+#
+# BLE advertising (station proximity beacon)
+# bluepy >= 1.3.0            # Linux only
+# ──────────────────────────────────────────────────────────────────────────────

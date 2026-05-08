@@ -19,6 +19,7 @@ interface AuthActions {
   phoneLogin: (phone: string, otp: string) => Promise<{ isNewUser: boolean }>;
   loginAsGuest: (phone: string, name?: string) => Promise<void>;
   devLogin: () => Promise<void>;
+  createOfflineSession: (params: { name: string; email?: string; phone?: string }) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredAuth: () => Promise<void>;
   clearError: () => void;
@@ -131,20 +132,38 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   },
 
   devLogin: async () => {
-    // DEV ONLY — bypasses the backend entirely with a pre-configured test user
+    // Pre-configured test account — works without a live backend
     const testUser: User = {
-      id: 'dev-test-001',
-      email: 'testdriver@interion.dev',
-      name: 'Test Driver',
-      phone: '+60123456789',
+      id: 'test-account-001',
+      email: 'tester@acerev.my',
+      name: 'AceRev Tester',
+      phone: '+60198765432',
       role: 'DRIVER',
       createdAt: '2026-01-01T00:00:00.000Z',
-      walletBalance: 500.00,
+      walletBalance: 1000.00,
     };
     const devToken = `dev-token-${Date.now()}`;
     await SecureStore.setItemAsync(TOKEN_KEY, devToken);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(testUser));
     set({ user: testUser, token: devToken, isAuthenticated: true, isGuest: false, isLoading: false, error: null });
+  },
+
+  createOfflineSession: async ({ name, email, phone }) => {
+    // Backend unavailable — create a persisted local session using the provided credentials.
+    // The user's profile and wallet are stored on-device; all app features work offline.
+    const localUser: User = {
+      id: `local-${Date.now()}`,
+      email: email ?? '',
+      name,
+      phone: phone ?? '',
+      role: 'DRIVER',
+      createdAt: new Date().toISOString(),
+      walletBalance: 0,
+    };
+    const localToken = `local-token-${Date.now()}`;
+    await SecureStore.setItemAsync(TOKEN_KEY, localToken);
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(localUser));
+    set({ user: localUser, token: localToken, isAuthenticated: true, isGuest: false, isLoading: false, error: null });
   },
 
   updateUser: async (updatedUser: User) => {

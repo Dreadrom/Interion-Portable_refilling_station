@@ -1,0 +1,28 @@
+{
+  "name": "interion-testing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Test suite for Interion Portable Refilling Station — portable-refill-app",
+  "scripts": {
+    "test": "jest --config jest.config.js",
+    "test:unit": "jest --config jest.config.js --testPathPattern=unit/",
+    "test:stores": "jest --config jest.config.js --testPathPattern=stores/",
+    "test:api": "jest --config jest.config.js --testPathPattern=api/",
+    "test:network": "jest --config jest.config.js --testPathPattern=network/",
+    "test:security": "jest --config jest.config.js --testPathPattern=security/",
+    "test:coverage": "jest --config jest.config.js --coverage",
+    "test:watch": "jest --config jest.config.js --watch"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.0",
+    "axios-mock-adapter": "^1.22.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "typescript": "~5.4.0"
+  },
+  "dependencies": {
+    "axios": "^1.13.4",
+    "zustand": "^5.0.11"
+  }
+}

@@ -6,6 +6,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { query, queryOne } from '../database/connection';
 import {
     extractToken,
@@ -32,6 +33,36 @@ interface User {
   userrole: 'ADMIN' | 'DRIVER';
   createdat: string;
   updatedat: string;
+}
+
+// ---------------------------------------------------------------------------
+// AWS SNS client — region is picked up from Lambda execution environment or
+// the AWS_REGION env var set in the Lambda function configuration.
+// ---------------------------------------------------------------------------
+const snsClient = new SNSClient({ region: process.env.AWS_REGION ?? 'ap-southeast-1' });
+
+/**
+ * Send an OTP SMS via AWS SNS.
+ * SenderID "ACEREV" appears as the sender name on devices that support it
+ * (most Malaysian operators show it). Transactional type ensures delivery
+ * priority over promotional bulk messages.
+ */
+async function sendOtpSms(phone: string, otp: string): Promise<void> {
+  const command = new PublishCommand({
+    PhoneNumber: phone,
+    Message: `Your AceRev Refill Kiosk verification code is: ${otp}. Valid for 5 minutes. Do not share this code.`,
+    MessageAttributes: {
+      'AWS.SNS.SMS.SenderID': {
+        DataType: 'String',
+        StringValue: 'ACEREV',
+      },
+      'AWS.SNS.SMS.SMSType': {
+        DataType: 'String',
+        StringValue: 'Transactional',
+      },
+    },
+  });
+  await snsClient.send(command);
 }
 
 /**
@@ -553,11 +584,27 @@ async function handleSendOtp(
     [uuidv4(), normalised, otp, expiresAt.toISOString()]
   );
 
-  // TODO: Integrate real SMS gateway (e.g. Twilio, AWS SNS) here
-  // For now, log OTP and return success (demo mode)
-  console.log(`[OTP] Phone: ${normalised}, Code: ${otp}, Expires: ${expiresAt.toISOString()}`);
+  // Send OTP via AWS SNS. In non-production environments the OTP is also
+  // returned in the response body so developers can test without a real SIM.
+  const isProduction = process.env.NODE_ENV === 'production';
+  try {
+    await sendOtpSms(normalised, otp);
+  } catch (snsError: any) {
+    console.error('[OTP] SNS send failed:', snsError.message);
+    if (isProduction) {
+      return internalError('Failed to send OTP. Please try again.');
+    }
+    // In dev/staging fall through — OTP is returned in the response below
+    console.warn('[OTP] Falling back to response-body OTP (non-production only)');
+  }
 
-  return successResponse({ message: 'OTP sent successfully', demo: otp });
+  const responseBody: Record<string, unknown> = { message: 'OTP sent successfully' };
+  if (!isProduction) {
+    // Expose OTP in non-production responses only — never in production
+    responseBody.demo_otp = otp;
+  }
+
+  return successResponse(responseBody);
 }
 
 /**

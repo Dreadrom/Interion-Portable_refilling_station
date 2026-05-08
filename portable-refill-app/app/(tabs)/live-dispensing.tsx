@@ -18,6 +18,7 @@ import { StationDetail, ProductType } from '../../src/types';
 import { transactionStore } from '../../src/utils/transactionStore';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 import { getDemoStationById, deductDemoStationVolume } from '../../src/data/demoStations';
+import { env } from '../../src/config/env';
 
 type DispenseStatus = 'IDLE' | 'IN_PROGRESS' | 'COMPLETED' | 'STOPPED' | 'EMERGENCY_STOPPED';
 
@@ -37,6 +38,10 @@ export default function LiveDispensingScreen() {
   
   // Use ref to store timer so we can clear it
   const dispensingTimerRef = useRef<number | null>(null);
+  // WebSocket ref for real station telemetry
+  const wsRef = useRef<WebSocket | null>(null);
+  // Fallback timer — if WS not connected within 3 s, use simulation
+  const wsFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Live-value refs — always current, avoids stale-closure in async handlers
   const volumeRef = useRef(0);
@@ -50,25 +55,41 @@ export default function LiveDispensingScreen() {
   const holdAmount = params.holdAmount as string;
   const holdAmountRaw = parseFloat(params.holdAmountRaw as string) || 0;
   const nozzle = params.nozzle as string;
+  // Present when initiated via real backend flow (POST /stations/{id}/command AUTHORIZE)
+  const backendTxnId = params.backendTxnId as string | undefined;
 
   // Get unit price from station data
   const [unitPrice, setUnitPrice] = useState(10.00); // AdBlue default
 
   useEffect(() => {
     loadStationInfo();
-    // Start dispensing automatically when screen loads
     startPulseAnimation();
-    const timer = setTimeout(() => {
-      simulateDispensing();
-    }, 500); // Small delay to ensure station data is loaded
-    
-    return () => {
-      clearTimeout(timer);
-      // Cleanup dispensing timer on unmount
-      if (dispensingTimerRef.current) {
-        clearInterval(dispensingTimerRef.current);
-      }
-    };
+
+    const isDemo = stationId.startsWith('demo-') || !backendTxnId;
+
+    if (isDemo) {
+      // Demo / simulation path — start after short delay as before
+      const timer = setTimeout(() => {
+        simulateDispensing();
+      }, 500);
+      return () => {
+        clearTimeout(timer);
+        if (dispensingTimerRef.current) clearInterval(dispensingTimerRef.current);
+      };
+    } else {
+      // Real station path — connect WebSocket; fall back to simulation after 3 s
+      connectWebSocket(backendTxnId);
+      return () => {
+        if (wsFallbackTimerRef.current) clearTimeout(wsFallbackTimerRef.current);
+        if (dispensingTimerRef.current)  clearInterval(dispensingTimerRef.current);
+        if (wsRef.current) {
+          wsRef.current.onmessage = null;
+          wsRef.current.onerror = null;
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+      };
+    }
   }, []);
 
   const loadStationInfo = async () => {
@@ -111,6 +132,72 @@ export default function LiveDispensingScreen() {
     ).start();
   };
 
+  /**
+   * Connect to API Gateway WebSocket and subscribe to real-time station telemetry.
+   * Falls back to simulateDispensing() if the connection cannot be established within 3 s.
+   */
+  const connectWebSocket = (txnId: string) => {
+    if (!env.wsBaseUrl) {
+      simulateDispensing();
+      return;
+    }
+
+    // Arm fallback: if WS is not open within 3 s, use simulation
+    wsFallbackTimerRef.current = setTimeout(() => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        console.warn('WS fallback: not connected in 3 s — using simulation');
+        simulateDispensing();
+      }
+    }, 3000);
+
+    const ws = new WebSocket(env.wsBaseUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      if (wsFallbackTimerRef.current) {
+        clearTimeout(wsFallbackTimerRef.current);
+        wsFallbackTimerRef.current = null;
+      }
+      ws.send(JSON.stringify({ action: 'subscribe', transactionId: txnId }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data as string) as {
+          type: string;
+          volumeLitres?: number;
+          rateLPM?: number;
+          elapsedSeconds?: number;
+          amountCharged?: number;
+          stopReason?: string;
+        };
+
+        if (msg.type === 'FLOW') {
+          const vol    = msg.volumeLitres   ?? volumeRef.current;
+          const amount = msg.amountCharged  ?? (vol * unitPrice);
+          const elapsed = (msg.elapsedSeconds ?? 0) * 1000;
+          volumeRef.current  = vol;
+          amountRef.current  = amount;
+          elapsedRef.current = elapsed;
+          setVolumeDispensed(vol);
+          setAmountCharged(amount);
+          setElapsedTime(elapsed);
+        } else if (msg.type === 'COMPLETE') {
+          const reason = msg.stopReason ?? 'TARGET_REACHED';
+          if (msg.amountCharged !== undefined) amountRef.current = msg.amountCharged;
+          handleDispenseComplete(reason);
+        }
+      } catch (e) {
+        console.warn('WS parse error:', e);
+      }
+    };
+
+    ws.onerror = () => {
+      console.warn('WS error — falling back to simulation');
+      if (!dispensingTimerRef.current) simulateDispensing();
+    };
+  };
+
   const simulateDispensing = () => {
     const targetVolume = presetType === 'VOLUME' ? presetValue : presetValue / unitPrice;
     const dispensingRate = 0.08; // 0.08 litres per interval (realistic pump rate)
@@ -142,6 +229,12 @@ export default function LiveDispensingScreen() {
     if (dispensingTimerRef.current) {
       clearInterval(dispensingTimerRef.current);
       dispensingTimerRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.onmessage = null;
+      wsRef.current.onerror = null;
+      wsRef.current.close();
+      wsRef.current = null;
     }
   };
 

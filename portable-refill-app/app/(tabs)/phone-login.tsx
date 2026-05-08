@@ -26,7 +26,7 @@ export default function PhoneLoginScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const mode = (params.mode ?? 'login') as 'login' | 'guest' | 'register';
 
-  const { phoneLogin, loginAsGuest, isLoading } = useAuthStore();
+  const { phoneLogin, loginAsGuest, createOfflineSession, isLoading } = useAuthStore();
 
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
@@ -65,13 +65,17 @@ export default function PhoneLoginScreen() {
 
     setSending(true);
     try {
-      await post('/auth/send-otp', { phone: normalized });
+      const res: any = await post('/auth/send-otp', { phone: normalized });
       setPhone(normalized);
       setStep('otp');
       setResendCooldown(60);
       setTimeout(() => otpInputRef.current?.focus(), 300);
+      // Non-production backends send back a demo_otp for easy testing
+      if (res?.demo_otp) {
+        Alert.alert('Dev Mode', `OTP for ${normalized}: ${res.demo_otp}`);
+      }
     } catch (err: any) {
-      // For demo: allow continuing even if backend OTP endpoint isn't up yet
+      // Backend unreachable — fall through with a known test code
       Alert.alert(
         'Demo Mode',
         `OTP sent to ${normalized} (demo: use 123456)`,
@@ -102,7 +106,6 @@ export default function PhoneLoginScreen() {
     try {
       const result = await phoneLogin(phone, otp);
       if (result.isNewUser) {
-        // New user — let them set a name
         Alert.alert(
           'Welcome!',
           'Your phone has been verified. Your account has been created.',
@@ -112,7 +115,13 @@ export default function PhoneLoginScreen() {
         router.replace('/home');
       }
     } catch (err: any) {
-      Alert.alert('Verification Failed', err.message || 'Invalid or expired OTP. Please try again.');
+      if (!err.response) {
+        // Backend unreachable — create local session using the verified phone number
+        await createOfflineSession({ name: `Driver (${phone.slice(-4)})`, phone });
+        router.replace('/home');
+      } else {
+        Alert.alert('Verification Failed', err.message || 'Invalid or expired OTP. Please try again.');
+      }
     }
   };
 

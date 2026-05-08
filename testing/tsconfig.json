@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "commonjs",
+    "lib": ["ES2017"],
+    "moduleResolution": "node",
+    "jsx": "react",
+    "strict": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "expo-secure-store": ["./__mocks__/expo-secure-store.ts"],
+      "expo-constants": ["./__mocks__/expo-constants.ts"],
+      "expo-crypto": ["./__mocks__/expo-crypto.ts"],
+      "@react-native-async-storage/async-storage": [
+        "./__mocks__/@react-native-async-storage/async-storage.ts"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "../portable-refill-app/src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage"
+  ]
+}

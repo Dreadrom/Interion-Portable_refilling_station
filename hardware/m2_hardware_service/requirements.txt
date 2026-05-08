@@ -1,0 +1,30 @@
+# ODROID-M2 Hardware Gateway Service
+# Python 3.11+ required
+# Install: pip install -r requirements.txt
+
+# ── Core ─────────────────────────────────────────────────────────────────────
+
+# Environment variable loading
+python-dotenv >= 1.0.0
+
+# HTTP diagnostics API
+flask >= 3.0.0
+
+# Structured logging
+structlog >= 24.1.0
+
+# ── AWS IoT Core MQTT (mTLS) ─────────────────────────────────────────────────
+awsiotsdk >= 1.21.0
+
+# ── RS485 Modbus RTU (level sensor via USB-RS485 adapter) ────────────────────
+pymodbus >= 3.6.0
+
+# ── ODROID-M2 GPIO (Linux libgpiod Python bindings) ──────────────────────────
+# Install via apt on Ubuntu:  sudo apt install python3-gpiod
+# Or via pip (may need libgpiod2 system package first):
+gpiod >= 1.5.0
+
+# ── Optional: Pillow for OLED display text rendering (SSD1306, BOM C6) ───────
+# Uncomment when wiring up the status OLED
+# Pillow >= 10.0.0
+# adafruit-circuitpython-ssd1306 >= 2.12.0
