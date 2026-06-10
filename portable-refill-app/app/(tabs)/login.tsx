@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,8 +23,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const { login, devLogin, createOfflineSession, isLoading } = useAuthStore();
 
-  const TEST_EMAIL = 'tester@acerev.my';
-  const TEST_PASSWORD = 'AceRev@2026';
+  const TEST_EMAIL = 'tester@bluediesel.com.my';
+  const TEST_PASSWORD = 'BlueDiesel@2026';
 
   const handleEmailLogin = async () => {
     if (!email || !password) {
@@ -40,8 +41,8 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace('/home');
     } catch (error: any) {
-      if (!error.response) {
-        // Backend unreachable — create local session so the demo flow works
+      // Backend unreachable (network error or timeout) — create local session so the demo flow works
+      if (error.code === 'SERVICE_UNAVAILABLE' || error.code === 'GATEWAY_TIMEOUT' || error.code === 'INTERNAL_SERVER_ERROR') {
         await createOfflineSession({ name: email.split('@')[0], email });
         router.replace('/home');
       } else {
@@ -51,6 +52,7 @@ export default function LoginScreen() {
   };
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       <Image
         source={require('../images/fuel_station_logo.jpg')}
@@ -58,7 +60,7 @@ export default function LoginScreen() {
         resizeMode="contain"
       />
 
-      <Text style={styles.title}>AceRev Refill Kiosk</Text>
+      <Text style={styles.title}>BlueDiesel</Text>
 
       {/* Quick Dispense — primary CTA for one-time users */}
       <TouchableOpacity
@@ -170,8 +172,17 @@ export default function LoginScreen() {
         </View>
       )}
 
+      <TouchableOpacity
+        onPress={() => router.push('/terms-and-conditions')}
+        style={{ marginTop: 30, alignItems: 'center', paddingVertical: 12 }}
+      >
+        <Text style={{ fontSize: 13, color: '#64748B', textDecorationLine: 'underline' }}>
+          Terms and Conditions
+        </Text>
+      </TouchableOpacity>
 
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -7,16 +7,17 @@
 ## 📚 Documentation Index
 
 ### 🎯 Start Here
-1. **[GUIDE_FOR_JQ.md](GUIDE_FOR_JQ.md)** - 👋 **NEW? START HERE!** - Complete onboarding guide
-2. **[TODO.md](TODO.md)** - 📋 **Task tracking & progress** - Check what's done and what's next
-3. **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Complete overview of what's built and what's next
-4. **[QUICKSTART.md](New_App/portable-refill-app/QUICKSTART.md)** - Get started in 5 minutes
-5. **[SETUP.md](New_App/portable-refill-app/SETUP.md)** - Detailed setup instructions
+1. **[Documentation Hub](docs/README.md)** - Central index for all project documents
+2. **[GUIDE_FOR_JQ.md](docs/guides/GUIDE_FOR_JQ.md)** - 👋 **NEW? START HERE!** - Complete onboarding guide
+3. **[TODO.md](docs/operations/TODO.md)** - 📋 **Task tracking & progress** - Check what's done and what's next
+4. **[PROJECT_SUMMARY.md](docs/guides/PROJECT_SUMMARY.md)** - Complete overview of what's built and what's next
+5. **[QUICKSTART.md](portable-refill-app/QUICKSTART.md)** - Get started in 5 minutes
+6. **[SETUP.md](portable-refill-app/SETUP.md)** - Detailed setup instructions
 
 ### 🏗️ Architecture & Design
-6. **[ARCHITECTURE.md](ARCHITECTURE.md)** - Full system architecture (mobile + cloud + hardware)
-7. **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - Visual diagrams and data flows
-8. **[PROMPTS.md](PROMPTS.md)** - Development history and version tracking
+7. **[ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)** - Full system architecture (mobile + cloud + hardware)
+8. **[ARCHITECTURE_DIAGRAM.md](docs/architecture/ARCHITECTURE_DIAGRAM.md)** - Visual diagrams and data flows
+9. **[PROMPTS.md](docs/operations/PROMPTS.md)** - Development history and version tracking
 
 ---
 
@@ -24,7 +25,7 @@
 
 ```bash
 # 1. Navigate to mobile app
-cd New_App/portable-refill-app
+cd portable-refill-app
 
 # 2. Install dependencies
 npm install axios zustand @tanstack/react-query expo-secure-store react-native-qrcode-svg date-fns @types/node
@@ -43,23 +44,25 @@ npm start
 
 ```
 Interion-Portable_refilling_station/
-├── New_App/                       # 🆕 Main development folder
-│   └── portable-refill-app/       # React Native mobile app (iOS + Android)
-│       ├── src/
-│       │   ├── api/               # ✅ API client layer
-│       │   ├── types/             # ✅ TypeScript definitions
-│       │   ├── utils/             # ✅ Utilities (formatters, validators)
-│       │   ├── config/            # ✅ Environment configuration
-│       │   ├── stores/            # ⏭️ Zustand stores (next)
-│       │   ├── hooks/             # ⏭️ React Query hooks (next)
-│       │   └── components/        # ⏭️ UI components (next)
-│       ├── app/                   # ⏭️ Expo Router screens (next)
-│       └── QUICKSTART.md          # Quick start guide
-│
-├── ARCHITECTURE.md                # System architecture document
-├── PROMPTS.md                     # Development history
-├── PROJECT_SUMMARY.md             # Complete project summary
-├── TODO.md                        # Task tracking
+├── docs/                          # Project documentation
+│   ├── README.md                  # Documentation hub
+│   ├── architecture/              # Architecture and diagrams
+│   ├── backend/                   # Server/database setup notes
+│   ├── guides/                    # Onboarding and project summaries
+│   ├── operations/                # Progress, prompts, and task tracking
+│   └── payments/                  # Payment integration notes
+├── portable-refill-app/           # React Native mobile app (iOS + Android)
+│   ├── src/
+│   │   ├── api/                   # API client layer
+│   │   ├── types/                 # TypeScript definitions
+│   │   ├── utils/                 # Utilities (formatters, validators)
+│   │   ├── config/                # Environment configuration
+│   │   ├── stores/                # Zustand stores
+│   │   ├── hooks/                 # React Query hooks
+│   │   └── components/            # UI components
+│   ├── app/                       # Expo Router screens
+│   ├── QUICKSTART.md              # Quick start guide
+│   └── SETUP.md                   # Setup and troubleshooting
 └── README.md                      # This file
 ```
 
@@ -282,9 +285,10 @@ Proprietary - All rights reserved
 
 ---
 
-**Ready to build?** Start with [QUICKSTART.md](New_App/portable-refill-app/QUICKSTART.md)! 🚀
+**Ready to build?** Start with [QUICKSTART.md](portable-refill-app/QUICKSTART.md)! 🚀
 
-For detailed architecture, see [ARCHITECTURE.md](ARCHITECTURE.md).  
-For project status, see [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md).  
-For development history, see [PROMPTS.md](PROMPTS.md).  
-For task tracking, see [TODO.md](TODO.md).
+For the full documentation map, see [docs/README.md](docs/README.md).  
+For detailed architecture, see [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).  
+For project status, see [PROJECT_SUMMARY.md](docs/guides/PROJECT_SUMMARY.md).  
+For development history, see [PROMPTS.md](docs/operations/PROMPTS.md).  
+For task tracking, see [TODO.md](docs/operations/TODO.md).

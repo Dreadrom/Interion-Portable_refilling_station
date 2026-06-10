@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -134,7 +133,7 @@ export default function PhoneLoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
     >
       <View style={styles.inner}>
         {/* Header */}

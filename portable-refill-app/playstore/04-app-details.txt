@@ -1,0 +1,26 @@
+CATEGORY: Business
+
+TAGS (select up to 5):
+1. adblue
+2. refueling
+3. fleet management
+4. commercial vehicles
+5. diesel
+
+EMAIL: info@bluediesel.com.my
+
+WEBSITE: https://cp1.interion.com.sg
+
+CONTENT RATING ANSWERS:
+- Violence: No
+- Sexual Content: No
+- Profanity: No
+- Controlled Substances: No
+- Gambling: No
+- User-Generated Content: No
+- User Interaction: Yes (users can create accounts)
+- Shares Location: Yes (to show nearby stations)
+- Digital Purchases: Yes (wallet top-ups)
+- Expected Rating: PEGI 3 / Everyone
+
+PRICING: Free (with in-app purchases for wallet top-ups)

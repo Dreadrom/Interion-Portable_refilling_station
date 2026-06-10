@@ -17,7 +17,7 @@
 
 ### Step 1: Install Dependencies
 
-Open a terminal in the `New_App/portable-refill-app` directory and run:
+Open a terminal in the `portable-refill-app` directory and run:
 
 ```bash
 npm install axios zustand @tanstack/react-query expo-secure-store react-native-qrcode-svg date-fns @types/node
@@ -79,7 +79,7 @@ Then press:
 ## 📂 Current Project Structure
 
 ```
-New_App/portable-refill-app/
+portable-refill-app/
 ├── src/
 │   ├── api/                    # ✅ API client layer
 │   │   ├── client.ts          # Axios instance + interceptors
@@ -259,8 +259,8 @@ npm install
 
 ## 📚 Resources
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - Full system architecture
-- [PROMPTS.md](../PROMPTS.md) - Development history
+- [ARCHITECTURE.md](../docs/architecture/ARCHITECTURE.md) - Full system architecture
+- [PROMPTS.md](../docs/operations/PROMPTS.md) - Development history
 - [SETUP.md](SETUP.md) - Detailed setup guide
 - [Expo Documentation](https://docs.expo.dev/)
 - [React Navigation](https://reactnavigation.org/)

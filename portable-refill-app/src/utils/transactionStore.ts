@@ -7,8 +7,12 @@ const HISTORY_KEY = 'transaction_history';
 
 export interface TransactionData {
   id: string;
-  timestamp: number;
+  timestamp: number;          // Unix ms — when dispensing ended (receipt issued)
+  dispensingStartTime: number; // Unix ms — when pumping actually started
   stationName: string;
+  stationId: string;
+  stationAddress: string;
+  stationPhone: string;
   product: string;
   nozzle: string;
   volumeDispensed: number;
@@ -19,6 +23,9 @@ export interface TransactionData {
   holdAmount: string;
   elapsedTime: string;
   stopReason: string;
+  terminalId: string;         // e.g. "ACEREV-<stationId>"
+  approvalCode: string;       // wallet auth reference
+  paymentRef: string;         // transaction ID shown on payment line
 }
 
 class TransactionStore {
@@ -50,9 +57,11 @@ class TransactionStore {
     }
     
     // Auto-cleanup in-memory entry after 1 hour
-    setTimeout(() => {
+    // .unref() prevents this timer from keeping the Node.js process alive (relevant in tests)
+    const cleanup = setTimeout(() => {
       this.transactions.delete(id);
     }, 60 * 60 * 1000);
+    (cleanup as any).unref?.();
     
     return id;
   }

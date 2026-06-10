@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 import { post, get } from '../api/client';
 import { login as apiLogin, register as apiRegister, getCurrentUser } from '../api/auth';
 import { User, LoginRequest, RegisterRequest } from '../types';
+import * as storage from '../utils/storage';
 
 interface AuthState {
   user: User | null;
@@ -44,8 +44,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const response = await apiLogin(data);
       const user: User = { walletBalance: 500.00, ...response.user };
-      await SecureStore.setItemAsync(TOKEN_KEY, response.token);
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      await storage.setItem(TOKEN_KEY, response.token);
+      await storage.setItem(USER_KEY, JSON.stringify(user));
       set({
         user,
         token: response.token,
@@ -66,8 +66,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const response = await apiRegister(data);
       const user: User = { walletBalance: 500.00, ...response.user };
-      await SecureStore.setItemAsync(TOKEN_KEY, response.token);
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      await storage.setItem(TOKEN_KEY, response.token);
+      await storage.setItem(USER_KEY, JSON.stringify(user));
       set({
         user,
         token: response.token,
@@ -85,18 +85,42 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   topUpBalance: async (amount: number) => {
     const user = get().user;
-    if (!user) return;
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    if (amount <= 0) {
+      throw new Error('Top-up amount must be greater than zero');
+    }
     const updatedUser: User = { ...user, walletBalance: (user.walletBalance ?? 0) + amount };
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
-    set({ user: updatedUser });
+    try {
+      await storage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+    } catch (error) {
+      console.error('Failed to update wallet balance:', error);
+      throw new Error('Failed to update wallet balance');
+    }
   },
 
   deductBalance: async (amount: number) => {
     const user = get().user;
-    if (!user) return;
-    const updatedUser: User = { ...user, walletBalance: Math.max((user.walletBalance ?? 0) - amount, 0) };
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
-    set({ user: updatedUser });
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    if (amount <= 0) {
+      throw new Error('Deduction amount must be greater than zero');
+    }
+    const currentBalance = user.walletBalance ?? 0;
+    if (currentBalance < amount) {
+      throw new Error(`Insufficient balance. Current: ${currentBalance.toFixed(2)}, Required: ${amount.toFixed(2)}`);
+    }
+    const updatedUser: User = { ...user, walletBalance: Math.max(currentBalance - amount, 0) };
+    try {
+      await storage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+    } catch (error) {
+      console.error('Failed to deduct wallet balance:', error);
+      throw new Error('Failed to deduct wallet balance');
+    }
   },
 
   phoneLogin: async (phone: string, otp: string) => {
@@ -104,8 +128,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const response: any = await post('/auth/verify-otp', { phone, otp });
       const user: User = { walletBalance: response.user.walletBalance ?? 0, ...response.user };
-      await SecureStore.setItemAsync(TOKEN_KEY, response.token);
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      await storage.setItem(TOKEN_KEY, response.token);
+      await storage.setItem(USER_KEY, JSON.stringify(user));
       set({ user, token: response.token, isAuthenticated: true, isGuest: false, isLoading: false });
       return { isNewUser: !!response.isNewUser };
     } catch (error: any) {
@@ -135,16 +159,16 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     // Pre-configured test account — works without a live backend
     const testUser: User = {
       id: 'test-account-001',
-      email: 'tester@acerev.my',
-      name: 'AceRev Tester',
+      email: 'tester@bluediesel.com.my',
+      name: 'BlueDiesel Tester',
       phone: '+60198765432',
       role: 'DRIVER',
       createdAt: '2026-01-01T00:00:00.000Z',
       walletBalance: 1000.00,
     };
     const devToken = `dev-token-${Date.now()}`;
-    await SecureStore.setItemAsync(TOKEN_KEY, devToken);
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(testUser));
+    await storage.setItem(TOKEN_KEY, devToken);
+    await storage.setItem(USER_KEY, JSON.stringify(testUser));
     set({ user: testUser, token: devToken, isAuthenticated: true, isGuest: false, isLoading: false, error: null });
   },
 
@@ -161,19 +185,19 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       walletBalance: 0,
     };
     const localToken = `local-token-${Date.now()}`;
-    await SecureStore.setItemAsync(TOKEN_KEY, localToken);
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(localUser));
+    await storage.setItem(TOKEN_KEY, localToken);
+    await storage.setItem(USER_KEY, JSON.stringify(localUser));
     set({ user: localUser, token: localToken, isAuthenticated: true, isGuest: false, isLoading: false, error: null });
   },
 
   updateUser: async (updatedUser: User) => {
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(updatedUser));
+    await storage.setItem(USER_KEY, JSON.stringify(updatedUser));
     set({ user: updatedUser });
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
+    await storage.deleteItem(TOKEN_KEY);
+    await storage.deleteItem(USER_KEY);
     set({
       user: null,
       token: null,
@@ -186,8 +210,8 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   loadStoredAuth: async () => {
     set({ isLoading: true });
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const userJson = await SecureStore.getItemAsync(USER_KEY);
+      const token = await storage.getItem(TOKEN_KEY);
+      const userJson = await storage.getItem(USER_KEY);
       if (token && userJson) {
         const user = JSON.parse(userJson) as User;
         set({ user, token, isAuthenticated: true, isLoading: false });

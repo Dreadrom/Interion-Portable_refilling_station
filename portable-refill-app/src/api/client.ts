@@ -3,10 +3,10 @@
  */
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { env, isDevelopment } from '../config/env';
 import { ApiResponse, ApiError, HttpErrorCode } from '../types';
 import { STORAGE_KEYS } from '../utils/constants';
+import * as storage from '../utils/storage';
 
 /**
  * Create axios instance
@@ -24,7 +24,7 @@ const apiClient: AxiosInstance = axios.create({
  */
 async function getAuthToken(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN);
+    return await storage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
     console.error('Error getting auth token:', error);
     return null;
@@ -36,7 +36,7 @@ async function getAuthToken(): Promise<string | null> {
  */
 export async function saveAuthToken(token: string): Promise<void> {
   try {
-    await SecureStore.setItemAsync(STORAGE_KEYS.AUTH_TOKEN, token);
+    await storage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   } catch (error) {
     console.error('Error saving auth token:', error);
   }
@@ -47,7 +47,7 @@ export async function saveAuthToken(token: string): Promise<void> {
  */
 export async function removeAuthToken(): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN);
+    await storage.deleteItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
     console.error('Error removing auth token:', error);
   }

@@ -15,6 +15,7 @@ type GridItem = {
 
 const accountMenuItems: GridItem[] = [
   { icon: 'time-outline', label: 'History', route: './transaction-history' },
+  { icon: 'map-outline', label: 'Station Map', route: './station-map' },
   { icon: 'person-outline', label: 'Profile', route: './profile' },
   { icon: 'card-outline', label: 'Bank Accounts', route: './bank-account' },
   { icon: 'settings-outline', label: 'Settings', route: '/settings' },
@@ -35,6 +36,7 @@ export default function HomeScreen() {
 
   const initial = (user?.name ?? 'G').charAt(0).toUpperCase();
   const balance = (user?.walletBalance ?? 0).toFixed(2);
+  const hasLowBalance = (user?.walletBalance ?? 0) < 50;
 
   const handleLogout = async () => {
     await logout();
@@ -71,20 +73,20 @@ export default function HomeScreen() {
       )}
 
       {/* Wallet Card */}
-      <View style={styles.walletCard}>
+      <View style={[styles.walletCard, hasLowBalance && styles.walletCardLowBalance]}>
         <Text style={styles.walletLabel}>Wallet Balance</Text>
         <Text style={styles.walletBalance}>MYR {balance}</Text>
+        {hasLowBalance && (
+          <View style={styles.lowBalanceWarning}>
+            <Ionicons name="warning-outline" size={14} color="#F59E0B" />
+            <Text style={styles.lowBalanceText}>Low balance - Top up to continue</Text>
+          </View>
+        )}
         <View style={styles.walletActions}>
           <TouchableOpacity style={styles.walletBtn} onPress={() => router.push('./top-up-wallet')}>
             <Ionicons name="add" size={15} color="#059669" />
             <Text style={styles.walletBtnText}>Top Up</Text>
           </TouchableOpacity>
-          {!isGuest && (
-            <TouchableOpacity style={styles.walletBtnSecondary} onPress={() => router.push('./wallet-cashout')}>
-              <Ionicons name="arrow-up-circle-outline" size={15} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.walletBtnSecondaryText}>Cash Out</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -124,6 +126,18 @@ export default function HomeScreen() {
         <View style={styles.connectBody}>
           <Text style={styles.connectTitle}>Connect to Station</Text>
           <Text style={styles.connectSub}>Scan the QR code to start refilling</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+      </TouchableOpacity>
+
+      {/* Find Stations (always visible) */}
+      <TouchableOpacity style={styles.connectCard} onPress={() => router.push('./station-map' as any)}>
+        <View style={[styles.connectIconBox, { backgroundColor: '#EFF6FF' }]}>
+          <Ionicons name="map-outline" size={26} color="#3B82F6" />
+        </View>
+        <View style={styles.connectBody}>
+          <Text style={styles.connectTitle}>Find Nearby Stations</Text>
+          <Text style={styles.connectSub}>View all BlueDiesel stations on the map</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
       </TouchableOpacity>
@@ -203,6 +217,25 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     marginBottom: 16,
+  },
+  walletCardLowBalance: {
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+  },
+  lowBalanceWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  lowBalanceText: {
+    fontSize: 12,
+    color: '#FCD34D',
+    fontWeight: '600',
   },
   walletLabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 6 },
   walletBalance: {

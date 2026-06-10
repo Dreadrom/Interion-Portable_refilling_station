@@ -15,6 +15,10 @@ export async function getStations(params?: GetStationsRequest): Promise<Station[
   return get<Station[]>(API_ENDPOINTS.STATIONS, params);
 }
 
+export async function getNearbyStations(): Promise<Station[]> {
+  return get<Station[]>(API_ENDPOINTS.STATIONS, { limit: 50 });
+}
+
 export async function getStationById(id: string): Promise<StationDetail> {
   return get<StationDetail>(API_ENDPOINTS.STATION_DETAIL(id));
 }

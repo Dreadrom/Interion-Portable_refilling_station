@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { forgotPassword, resetPassword } from '../../src/api/auth';
 
@@ -89,8 +89,9 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>AceRev Refill Kiosk</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior="padding">
+    <ScrollView contentContainerStyle={[globalStyles.container, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
+      <Text style={globalStyles.title}>BlueDiesel</Text>
       <Text style={globalStyles.subtitle}>Forgot Password</Text>
 
       {step === 1 && (
@@ -181,6 +182,7 @@ export default function ForgotPasswordScreen() {
       >
         <Text style={globalStyles.secondaryButtonText}>Cancel</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

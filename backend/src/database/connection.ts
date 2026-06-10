@@ -8,24 +8,29 @@ import { Pool, QueryResult } from 'pg';
 let pool: Pool | null = null;
 
 /**
- * Database configuration from environment variables
- */
-const dbConfig = {
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  max: 10, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-};
-
-/**
  * Get database connection pool
  */
 export function getPool(): Pool {
   if (!pool) {
+    // Database configuration from environment variables
+    // Read at runtime to ensure dotenv has loaded
+    console.log('DB Config:', {
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD ? '***SET***' : 'UNDEFINED',
+      database: process.env.DB_NAME,
+    });
+    const dbConfig = {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      max: 10, // Maximum number of clients in the pool
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    };
     pool = new Pool(dbConfig);
   }
   return pool;

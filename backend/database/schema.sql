@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS Users (
     UserName VARCHAR(255) NOT NULL,
     UserPhone VARCHAR(50),
     UserRole user_role DEFAULT 'DRIVER',
+    EmailVerified BOOLEAN DEFAULT FALSE,
+    EmailVerificationToken VARCHAR(255),
+    EmailVerificationExpires TIMESTAMP,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

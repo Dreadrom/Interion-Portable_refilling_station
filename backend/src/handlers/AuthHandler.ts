@@ -15,6 +15,7 @@ import {
     getExpiresIn,
     verifyToken,
 } from '../utils/jwt';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 import {
     errorResponse,
     internalError,
@@ -33,6 +34,29 @@ interface User {
   userrole: 'ADMIN' | 'DRIVER';
   createdat: string;
   updatedat: string;
+}
+
+interface Wallet {
+  walletid: string;
+  userid: string;
+  balance: string;
+  currency: string;
+}
+
+/**
+ * Helper function to get user's wallet balance
+ */
+async function getUserWalletBalance(userId: string): Promise<number> {
+  try {
+    const wallet = await queryOne<Wallet>(
+      'SELECT Balance as balance FROM Wallets WHERE userid = $1',
+      [userId]
+    );
+    return wallet ? parseFloat(wallet.balance) : 0;
+  } catch (error) {
+    console.warn(`Unable to fetch wallet balance for user ${userId}:`, error);
+    return 0;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +121,13 @@ export async function handler(
     if (path === '/auth/reset-password' && method === 'POST') {
       return await handleResetPassword(event);
     }
+    if (path === '/auth/verify-email' && method === 'POST') {
+      return await handleVerifyEmail(event);
+    }
 
+    if (path === '/auth/resend-verification' && method === 'POST') {
+      return await handleResendVerification(event);
+    }
     if (path === '/auth/logout' && method === 'POST') {
       return await handleLogout(event);
     }
@@ -173,18 +203,54 @@ async function handleRegister(
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create user
+  // Generate email verification token
+  const verificationToken = uuidv4();
+  const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  // Create user with email verification fields
   const userId = uuidv4();
-  await query(
-    `INSERT INTO Users (UserID, UserEmail, UserPassword, UserName, UserPhone, UserRole)
-     VALUES ($1, $2, $3, $4, $5, 'DRIVER')`,
-    [userId, email, hashedPassword, name, phone || null]
-  );
+  try {
+    await query(
+      `INSERT INTO Users (userid, useremail, userpassword, username, userphone, userrole, emailverified, emailverificationtoken, emailverificationexpires)
+       VALUES ($1, $2, $3, $4, $5, 'DRIVER', FALSE, $6, $7)`,
+      [userId, email, hashedPassword, name, phone || null, verificationToken, verificationExpires]
+    );
+  } catch (error: any) {
+    // Fallback for databases without email verification columns
+    if (error.code === '42703') {
+      await query(
+        `INSERT INTO Users (userid, useremail, userpassword, username, userphone, userrole)
+         VALUES ($1, $2, $3, $4, $5, 'DRIVER')`,
+        [userId, email, hashedPassword, name, phone || null]
+      );
+      console.warn('Email verification columns not found, using legacy schema');
+    } else {
+      throw error;
+    }
+  }
+
+  // Send verification email
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8082';
+  const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+  
+  try {
+    await sendVerificationEmail(email, {
+      userName: name,
+      verificationLink,
+    });
+    console.log('✅ Verification email sent to:', email);
+  } catch (emailError) {
+    console.error('❌ Failed to send verification email:', emailError);
+    // Don't fail registration if email fails - user can resend later
+  }
 
   // Generate tokens
   const tokenPayload = { userId, email, role: 'DRIVER' };
   const token = generateToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
+
+  // Get wallet balance
+  const walletBalance = await getUserWalletBalance(userId);
 
   // Return user data
   return successResponse(
@@ -196,6 +262,7 @@ async function handleRegister(
         phone: phone || null,
         role: 'DRIVER',
         createdAt: new Date().toISOString(),
+        walletBalance,
       },
       token,
       refreshToken,
@@ -214,19 +281,34 @@ async function handleLogin(
   const body = JSON.parse(event.body || '{}');
   const { email, password } = body;
 
-  // Validation
+  // Validate
   if (!email || !password) {
     return validationError('Email and password are required');
   }
 
   // Find user
   const user = await queryOne<User>(
-    'SELECT * FROM Users WHERE UserEmail = $1',
+    'SELECT * FROM Users WHERE useremail = $1',
     [email]
   );
 
   if (!user) {
-    return unauthorizedError('Invalid email or password');
+    return unauthorizedError('Invalid credentials');
+  }
+
+  // Check email verification (graceful fallback if column doesn't exist)
+  try {
+    const emailVerified = (user as any).emailverified;
+    if (emailVerified === false) {
+      return errorResponse(
+        'EMAIL_NOT_VERIFIED',
+        'Please verify your email address before logging in. Check your inbox for the verification link.',
+        403
+      );
+    }
+  } catch (error) {
+    // Column doesn't exist, skip verification check
+    console.warn('Email verification check skipped - column not found');
   }
 
   // Verify password
@@ -245,6 +327,9 @@ async function handleLogin(
   const token = generateToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 
+  // Get wallet balance
+  const walletBalance = await getUserWalletBalance(user.userid);
+
   // Return user data
   return successResponse({
     user: {
@@ -255,6 +340,7 @@ async function handleLogin(
       role: user.userrole,
       createdAt: user.createdat,
       updatedAt: user.updatedat,
+      walletBalance,
     },
     token,
     refreshToken,
@@ -284,13 +370,16 @@ async function handleGetMe(
 
   // Get user from database
   const user = await queryOne<User>(
-    'SELECT * FROM Users WHERE UserID = $1',
+    'SELECT * FROM Users WHERE userid = $1',
     [payload.userId]
   );
 
   if (!user) {
     return notFoundError('User not found');
   }
+
+  // Get wallet balance
+  const walletBalance = await getUserWalletBalance(user.userid);
 
   return successResponse({
     id: user.userid,
@@ -300,6 +389,7 @@ async function handleGetMe(
     role: user.userrole,
     createdAt: user.createdat,
     updatedAt: user.updatedat,
+    walletBalance,
   });
 }
 
@@ -339,14 +429,29 @@ async function handleForgotPassword(
     [uuidv4(), user.userid, resetToken, expiresAt]
   );
 
-  // TODO: Send email with reset token
-  // For now, just return the token (in production, send via email)
-  console.log('Reset token:', resetToken);
+  // Get user info for email
+  const userInfo = await queryOne<User>(
+    'SELECT * FROM Users WHERE userid = $1',
+    [user.userid]
+  );
+
+  // Send password reset email
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8082';
+  const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+  
+  try {
+    await sendPasswordResetEmail(email, {
+      userName: userInfo?.username || 'User',
+      resetLink,
+    });
+    console.log('✅ Password reset email sent to:', email);
+  } catch (emailError) {
+    console.error('❌ Failed to send password reset email:', emailError);
+    // Still return success to prevent email enumeration
+  }
 
   return successResponse({
     message: 'If the email exists, a password reset link has been sent',
-    // Remove this in production:
-    resetToken: resetToken,
   });
 }
 
@@ -427,25 +532,25 @@ async function handleUpdateProfile(
   let paramCount = 1;
 
   if (name) {
-    updates.push(`UserName = $${paramCount++}`);
+    updates.push(`username = $${paramCount++}`);
     params.push(name);
   }
 
   if (phone !== undefined) {
-    updates.push(`UserPhone = $${paramCount++}`);
+    updates.push(`userphone = $${paramCount++}`);
     params.push(phone || null);
   }
 
   if (email) {
     // Check if email is already taken by another user
     const existingUser = await queryOne<User>(
-      'SELECT userid FROM Users WHERE UserEmail = $1 AND UserID != $2',
+      'SELECT userid FROM Users WHERE useremail = $1 AND userid != $2',
       [email, payload.userId]
     );
     if (existingUser) {
       return errorResponse('CONFLICT', 'Email address is already in use', 409);
     }
-    updates.push(`UserEmail = $${paramCount++}`);
+    updates.push(`useremail = $${paramCount++}`);
     params.push(email);
   }
 
@@ -456,15 +561,18 @@ async function handleUpdateProfile(
   params.push(payload.userId);
 
   await query(
-    `UPDATE Users SET ${updates.join(', ')} WHERE UserID = $${paramCount}`,
+    `UPDATE Users SET ${updates.join(', ')} WHERE userid = $${paramCount}`,
     params
   );
 
   // Get updated user
   const user = await queryOne<User>(
-    'SELECT * FROM Users WHERE UserID = $1',
+    'SELECT * FROM Users WHERE userid = $1',
     [payload.userId]
   );
+
+  // Get wallet balance
+  const walletBalance = await getUserWalletBalance(user!.userid);
 
   return successResponse({
     id: user!.userid,
@@ -474,6 +582,7 @@ async function handleUpdateProfile(
     role: user!.userrole,
     createdAt: user!.createdat,
     updatedAt: user!.updatedat,
+    walletBalance,
   });
 }
 
@@ -550,6 +659,125 @@ async function handleLogout(
   return successResponse({
     message: 'Successfully logged out',
   });
+}
+
+/**
+ * Verify email with token
+ */
+async function handleVerifyEmail(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const body = JSON.parse(event.body || '{}');
+  const { token } = body;
+
+  if (!token) {
+    return validationError('Verification token is required');
+  }
+
+  try {
+    // Find user with this token
+    const user = await queryOne<User>(
+      `SELECT * FROM Users WHERE emailverificationtoken = $1 AND emailverificationexpires > NOW()`,
+      [token]
+    );
+
+    if (!user) {
+      return errorResponse(
+        'INVALID_TOKEN',
+        'Invalid or expired verification token',
+        400
+      );
+    }
+
+    // Mark email as verified
+    await query(
+      `UPDATE Users SET emailverified = TRUE, emailverificationtoken = NULL, emailverificationexpires = NULL WHERE userid = $1`,
+      [user.userid]
+    );
+
+    return successResponse({
+      message: 'Email verified successfully. You can now log in.',
+    });
+  } catch (error: any) {
+    // Fallback for databases without email verification columns
+    if (error.code === '42703') {
+      return successResponse({
+        message: 'Email verification not enabled on this server.',
+      });
+    }
+    throw error;
+  }
+}
+
+/**
+ * Resend verification email
+ */
+async function handleResendVerification(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const body = JSON.parse(event.body || '{}');
+  const { email } = body;
+
+  if (!email) {
+    return validationError('Email is required');
+  }
+
+  try {
+    // Find user
+    const user = await queryOne<User>(
+      `SELECT * FROM Users WHERE useremail = $1`,
+      [email]
+    );
+
+    if (!user) {
+      // Don't reveal if user exists
+      return successResponse({
+        message: 'If an account exists with this email, a verification link has been sent.',
+      });
+    }
+
+    // Check if already verified
+    const emailVerified = (user as any).emailverified;
+    if (emailVerified) {
+      return errorResponse('ALREADY_VERIFIED', 'Email is already verified', 400);
+    }
+
+    // Generate new verification token
+    const verificationToken = uuidv4();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await query(
+      `UPDATE Users SET emailverificationtoken = $1, emailverificationexpires = $2 WHERE userid = $3`,
+      [verificationToken, verificationExpires, user.userid]
+    );
+
+    // Send verification email
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8082';
+    const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    
+    try {
+      await sendVerificationEmail(email, {
+        userName: user.username,
+        verificationLink,
+      });
+      console.log('✅ Verification email resent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to resend verification email:', emailError);
+      // Still return success to prevent email enumeration
+    }
+
+    return successResponse({
+      message: 'If an account exists with this email, a verification link has been sent.',
+    });
+  } catch (error: any) {
+    // Fallback for databases without email verification columns
+    if (error.code === '42703') {
+      return successResponse({
+        message: 'Email verification not enabled on this server.',
+      });
+    }
+    throw error;
+  }
 }
 
 /**

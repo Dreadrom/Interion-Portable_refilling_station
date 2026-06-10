@@ -43,15 +43,15 @@
 
 | # | Item | Qty | Unit Price (est.) | Purchase Link | Notes |
 |---|---|---|---|---|---|
-| C1 | Logitech C920 HD Pro USB Webcam | 3 | ~RM299 each | [Lazada search](https://www.lazada.com.my/catalog/?q=logitech+c920+webcam) | 1080p/30fps; use C920s for privacy shutter |
-| C2 | Powered USB 3.0 Hub — 7 port, 5V/3A PSU | 1 | ~RM45 | [Lazada search](https://www.lazada.com.my/catalog/?q=powered+usb+3.0+hub+7+port) | Must be powered (self-powered) to drive 3 USB cameras |
+| C1 | Logitech C920 HD Pro USB Webcam | 2 | ~RM299 each | [Lazada search](https://www.lazada.com.my/catalog/?q=logitech+c920+webcam) | 1080p/30fps; use C920s for privacy shutter |
+| C2 | Powered USB 3.0 Hub — 7 port, 5V/3A PSU | 1 | ~RM45 | [Lazada search](https://www.lazada.com.my/catalog/?q=powered+usb+3.0+hub+7+port) | Must be powered (self-powered) to drive 2 USB cameras |
 | C3 | USB-to-RS485 Converter (CH340 or CP2102) | 1 | ~RM12 | [AliExpress search](https://www.aliexpress.com/wholesale?SearchText=usb+to+rs485+converter+ch340) | For level gauge + flow meter on shared Modbus RTU bus |
 | C4 | 4-Channel Opto-isolated Relay Module (5V coil) | 1 | ~RM12 | [AliExpress search](https://www.aliexpress.com/wholesale?SearchText=4+channel+opto+isolated+relay+module+5v) | Replaces M1S relay board. GPIO 3.3V triggers opto-isolator |
 | C5 | 12V Mini UPS Module (for router / 12V SBC) | 1 | ~RM65 | [Lazada search](https://www.lazada.com.my/catalog/?q=mini+ups+12v+router+uninterruptible) | Replaces M1S UPS kit. Must output 12V DC at ≥2A |
 | C6 | SSD1306 OLED 0.96" 128×64 I2C | 1 | ~RM6 | [AliExpress search](https://www.aliexpress.com/wholesale?SearchText=ssd1306+oled+128x64+i2c+0.96) | Status display on GPIO I2C bus |
 | C7 | CR2032 Coin Cell Battery (bare) | 1 | ~RM3 | Any 7-Eleven / Guardian / Ace Hardware | For M2 on-board RTC holder — do NOT buy the Hardkernel cable version |
 
-**Section C Subtotal: ~RM1,040** (including 3× cameras)  
+**Section C Subtotal: ~RM741** (including 2× cameras)  
 **Section C Subtotal (excluding cameras): ~RM143**
 
 ---
@@ -93,7 +93,7 @@
 |---|---|---|---|---|---|
 | F1 | CAT6 Ethernet Cable 2m | 1 | ~RM8 | Any hardware store | M2 to network switch |
 | F2 | Twisted-pair RS485 cable (Belden 9841 or equiv.) | 3m | ~RM15 | [RS Components MY](https://my.rs-online.com/web/c/cables-wires/data-industrial-cables/rs-485-cables/) | Level gauge + flow meter to USB-RS485 |
-| F3 | USB-A to USB-A cable 1m (×3) | 3 | ~RM6 each | Lazada | USB hub to cameras |
+| F3 | USB-A to USB-A cable 1m (×2) | 2 | ~RM6 each | Lazada | USB hub to cameras |
 | F4 | Jumper wires (male-female, 20cm, 40-pack) | 1 | ~RM5 | [AliExpress search](https://www.aliexpress.com/wholesale?SearchText=jumper+wire+male+female+40pcs+20cm) | GPIO wiring to relay modules |
 | F5 | M3 PCB standoffs & screws assorted kit | 1 | ~RM10 | [AliExpress search](https://www.aliexpress.com/wholesale?SearchText=m3+pcb+standoff+nylon+assorted+kit) | Mounting MCU fallback board in enclosure |
 | F6 | DIN-rail enclosure box (suitable for M2 + MCU) | 1 | ~RM80–150 | [Lazada search](https://www.lazada.com.my/catalog/?q=din+rail+electrical+enclosure+box) | IP54 rated preferred for kiosk installation |
@@ -108,14 +108,14 @@
 |---|---|---|
 | A — ODROID-M2 + Hardkernel Add-ons | Board, PSU, WiFi, CAN-FD, Case | S$338 (~RM1,149) |
 | B — Storage | NVMe SSD | ~RM130 |
-| C — Peripherals | 3× cameras, USB hub, RS485, relay, UPS, OLED | ~RM1,040 |
-| C (excl. cameras, ~RM897) | USB hub, RS485, relay, UPS, OLED | ~RM143 |
+| C — Peripherals | 2× cameras, USB hub, RS485, relay, UPS, OLED | ~RM741 |
+| C (excl. cameras, ~RM598) | USB hub, RS485, relay, UPS, OLED | ~RM143 |
 | D — MCU PLC Fallback | Arduino MEGA, W5500, RS485, relay | ~RM71 |
 | E — Industrial (excl. VEGA) | LOGO! 8.3, flow meter, solenoid, 24V PSU | ~RM2,550–3,180 |
 | E — VEGA PULS 10 Level Gauge | Radar level sensor | ~RM3,500–5,000 |
 | F — Cables & Enclosure | Misc | ~RM130–200 |
-| **TOTAL (with VEGA + cameras)** | | **~RM9,570–11,770** |
-| **TOTAL (cameras only, no VEGA)** | *(source alternative level sensor)* | **~RM4,170–5,770** |
+| **TOTAL (with VEGA + cameras)** | | **~RM9,271–11,471** |
+| **TOTAL (cameras only, no VEGA)** | *(source alternative level sensor)* | **~RM3,871–5,471** |
 
 ---
 
@@ -136,7 +136,7 @@ Phase 2 — I/O + connectivity
   9. C5  12V mini UPS
 
 Phase 3 — Cameras + display
-  10. C1  3× Logitech C920 USB webcam
+  10. C1  2× Logitech C920 USB webcam
   11. A6  Vu8S 8" LCD (if using MIPI display)
   12. C6  SSD1306 OLED
 

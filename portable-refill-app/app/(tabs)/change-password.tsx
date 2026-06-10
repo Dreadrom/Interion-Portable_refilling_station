@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -56,6 +57,7 @@ export default function ChangePasswordScreen() {
   };
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Change Password</Text>
@@ -118,6 +120,7 @@ export default function ChangePasswordScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

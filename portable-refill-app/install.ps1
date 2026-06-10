@@ -53,7 +53,7 @@ Write-Host ""
 Write-Host "📖 Documentation:" -ForegroundColor Cyan
 Write-Host "   - QUICKSTART.md - Quick start guide"
 Write-Host "   - SETUP.md - Detailed setup"
-Write-Host "   - ..\..\ARCHITECTURE.md - System architecture"
-Write-Host "   - ..\..\PROJECT_SUMMARY.md - Project overview"
+Write-Host "   - ..\docs\architecture\ARCHITECTURE.md - System architecture"
+Write-Host "   - ..\docs\guides\PROJECT_SUMMARY.md - Project overview"
 Write-Host ""
 Write-Host "Happy coding! 🎉" -ForegroundColor Green

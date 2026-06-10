@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -98,6 +99,7 @@ export default function BankAccountScreen() {
   };
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -240,6 +242,7 @@ export default function BankAccountScreen() {
         </Text>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

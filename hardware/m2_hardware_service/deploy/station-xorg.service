@@ -1,0 +1,27 @@
+# /etc/systemd/system/station-xorg.service
+#
+# Minimal X server for the kiosk display (HDMI → ODROID-VU8C touchscreen).
+# Runs a bare Openbox WM session so Chromium has a display to start on.
+#
+# Install:
+#   sudo cp station-xorg.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable station-xorg
+
+[Unit]
+Description=AceRev Station X Display Server
+After=systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=station
+Group=station
+ExecStart=/usr/bin/startx /usr/bin/openbox-session -- :0 -nolisten tcp vt7
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=station-xorg
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280, user-scalable=no" />
+  <title>AceRev Refilling Station</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════════════════════
+       DESIGN SYSTEM — Target: 1280×800 landscape, ODROID-VU8C / Waveshare 10.1"
+       ══════════════════════════════════════════════════════════════════════════ */
+    :root {
+      --blue:       #1A6BFF;
+      --blue-dim:   rgba(26,107,255,.15);
+      --green:      #0DBF7E;
+      --green-dim:  rgba(13,191,126,.12);
+      --red:        #FF453A;
+      --red-dim:    rgba(255,69,58,.12);
+      --orange:     #FF9F0A;
+      --orange-dim: rgba(255,159,10,.12);
+      --bg:         #0A0E14;
+      --surface:    #111820;
+      --surface2:   #1A2332;
+      --border:     #243040;
+      --text:       #E8F0FE;
+      --text2:      #A8B8CC;
+      --muted:      #5A7080;
+      --radius-sm:  10px;
+      --radius:     18px;
+      --radius-lg:  24px;
+      --bar-h:      52px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1280px; height: 800px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* ── Status bar ─────────────────────────────────────────────────────────── */
+    #bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--bar-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      z-index: 200;
+    }
+    .bar-left, .bar-right {
+      display: flex; align-items: center; gap: 20px;
+      font-size: 14px; color: var(--text2);
+    }
+    .bar-center { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .bar-pill {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 5px 14px; font-size: 13px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-red    { background: var(--red); }
+    .dot-grey   { background: var(--muted); }
+    .tank-bar-wrap {
+      width: 72px; height: 7px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 999px; overflow: hidden;
+    }
+    .tank-bar-fill {
+      height: 100%; border-radius: 999px; background: var(--green);
+      transition: width 1s ease, background .5s;
+    }
+
+    /* ── Screen system ──────────────────────────────────────────────────────── */
+    .screen {
+      position: absolute;
+      top: var(--bar-h); left: 0; right: 0; bottom: 0;
+      display: none;
+      animation: screenIn .35s cubic-bezier(.25,.8,.25,1);
+    }
+    .screen.active { display: flex; }
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       ① IDLE
+       ══════════════════════════════════════════════════════════════════════════ */
+    #screen-idle {
+      flex-direction: column; align-items: center; justify-content: center; gap: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 100%, rgba(13,191,126,.06) 0%, transparent 70%),
+        var(--bg);
+    }
+    .idle-logo {
+      font-size: 12px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 36px;
+    }
+    .scan-ring-wrap {
+      position: relative; width: 188px; height: 188px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 36px;
+    }
+    .scan-ring {
+      position: absolute; border-radius: 50%;
+      border: 2px solid var(--green);
+      animation: scanPulse 2.4s ease-out infinite;
+    }
+    .scan-ring:nth-child(1) { width: 188px; height: 188px; animation-delay: 0s; }
+    .scan-ring:nth-child(2) { width: 188px; height: 188px; animation-delay: .8s; }
+    .scan-ring:nth-child(3) { width: 188px; height: 188px; animation-delay: 1.6s; }
+    @keyframes scanPulse {
+      0%   { transform: scale(.52); opacity: .9; }
+      100% { transform: scale(1);   opacity: 0; }
+    }
+    .scan-icon {
+      position: relative; z-index: 1;
+      width: 96px; height: 96px; border-radius: 50%;
+      background: var(--green-dim); border: 2px solid rgba(13,191,126,.4);
+      display: flex; align-items: center; justify-content: center; font-size: 42px;
+    }
+    .idle-title  { font-size: 38px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 12px; }
+    .idle-sub    { font-size: 19px; color: var(--text2); }
+    .idle-steps  {
+      display: flex; margin-top: 52px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .idle-step {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px 28px; border-right: 1px solid var(--border);
+    }
+    .idle-step:last-child { border-right: none; }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue-dim); border: 1px solid rgba(26,107,255,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; color: var(--blue); flex-shrink: 0;
+    }
+    .step-text { font-size: 14px; color: var(--text2); text-align: left; }
+    .step-text strong { display: block; font-size: 15px; color: var(--text); margin-bottom: 2px; }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       ② AUTHORIZING
+       ══════════════════════════════════════════════════════════════════════════ */
+    #screen-auth {
+      flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+    }
+    .auth-rings {
+      position: relative; width: 152px; height: 152px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auth-ring {
+      position: absolute; border-radius: 50%;
+      border: 2px solid var(--blue);
+      animation: authRing 1.8s ease-in-out infinite;
+    }
+    .auth-ring:nth-child(1) { width: 76px;  height: 76px;  animation-delay: 0s; }
+    .auth-ring:nth-child(2) { width: 116px; height: 116px; animation-delay: .3s; }
+    .auth-ring:nth-child(3) { width: 152px; height: 152px; animation-delay: .6s; }
+    @keyframes authRing {
+      0%, 100% { opacity: .15; transform: scale(.95); }
+      50%       { opacity: .8;  transform: scale(1); }
+    }
+    .auth-center { position: relative; z-index: 1; font-size: 30px; }
+    .auth-title  { font-size: 32px; font-weight: 700; text-align: center; }
+    .auth-sub    { font-size: 17px; color: var(--text2); margin-top: 8px; text-align: center; }
+    .auth-txn    {
+      font-size: 13px; color: var(--muted); letter-spacing: 1px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 20px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       ③ DISPENSING  — split layout (left gauge | right metrics)
+       ══════════════════════════════════════════════════════════════════════════ */
+    #screen-dispensing { flex-direction: row; align-items: stretch; }
+
+    .disp-left {
+      width: 560px; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 28px 0;
+      border-right: 1px solid var(--border);
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(13,191,126,.05) 0%, transparent 70%);
+    }
+    .disp-section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    /* SVG gauge */
+    .gauge-wrap { position: relative; width: 300px; height: 300px; }
+    .gauge-svg  { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .gauge-track { fill: none; stroke: var(--surface2); stroke-width: 18; }
+    .gauge-arc   {
+      fill: none; stroke: var(--green); stroke-width: 18; stroke-linecap: round;
+      stroke-dasharray: 816.81; stroke-dashoffset: 816.81;
+      transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1), stroke .4s ease;
+      filter: drop-shadow(0 0 8px rgba(13,191,126,.5));
+    }
+    .gauge-arc.near-limit  { stroke: var(--orange); filter: drop-shadow(0 0 8px rgba(255,159,10,.5)); }
+    .gauge-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .gauge-vol  { font-size: 60px; font-weight: 800; letter-spacing: -2px; line-height: 1; color: var(--green); }
+    .gauge-unit { font-size: 18px; color: var(--text2); margin-top: 4px; }
+
+    .flow-live   {
+      display: flex; align-items: center; gap: 10px; margin-top: 6px;
+    }
+    .flow-pulse-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: var(--green);
+      animation: pulseDot 1s ease-in-out infinite;
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1);   opacity: 1; }
+      50%       { transform: scale(1.6); opacity: .4; }
+    }
+    .flow-rate-big  { font-size: 26px; font-weight: 700; color: var(--green); }
+    .flow-rate-unit { font-size: 14px; color: var(--muted); }
+
+    .disp-right {
+      flex: 1;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 14px; padding: 28px 36px;
+    }
+    .disp-right-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    }
+
+    /* Metric cards */
+    .mc {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mc-body   { display: flex; flex-direction: column; gap: 3px; }
+    .mc-lbl    { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); }
+    .mc-val    { font-size: 30px; font-weight: 700; }
+    .mc-unit   { font-size: 13px; color: var(--text2); margin-left: 4px; }
+    .mc-icon   { font-size: 26px; opacity: .35; }
+
+    /* Limit progress card */
+    .limit-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 22px;
+    }
+    .limit-hdr {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .limit-nums { font-size: 18px; font-weight: 600; }
+    .limit-nums span { color: var(--text2); font-weight: 400; font-size: 14px; }
+    .lbar-wrap {
+      height: 9px; background: var(--surface2); border-radius: 999px; overflow: hidden;
+    }
+    .lbar-fill {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+      width: 0%; transition: width .6s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       ④ COMPLETE
+       ══════════════════════════════════════════════════════════════════════════ */
+    #screen-complete {
+      flex-direction: row; align-items: center; justify-content: center; gap: 72px;
+      background:
+        radial-gradient(ellipse 50% 60% at 22% 50%, rgba(13,191,126,.06) 0%, transparent 70%),
+        var(--bg);
+    }
+    .complete-left  {
+      display: flex; flex-direction: column; align-items: center; gap: 24px;
+    }
+    .check-circle {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: var(--green-dim); border: 2px solid rgba(13,191,126,.4);
+      display: flex; align-items: center; justify-content: center;
+      animation: popIn .4s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn {
+      0%   { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .checkmark-path {
+      stroke: var(--green); stroke-width: 4;
+      stroke-linecap: round; stroke-linejoin: round; fill: none;
+      stroke-dasharray: 80; stroke-dashoffset: 80;
+      animation: drawCheck .4s ease .3s forwards;
+    }
+    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+    .complete-title { font-size: 34px; font-weight: 800; }
+    .complete-sub   { font-size: 17px; color: var(--text2); margin-top: 6px; }
+
+    /* Countdown ring */
+    .cd-wrap {
+      position: relative; width: 62px; height: 62px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cd-svg   { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+    .cd-track { fill: none; stroke: var(--surface2); stroke-width: 4; }
+    .cd-arc   {
+      fill: none; stroke: var(--green); stroke-width: 4; stroke-linecap: round;
+      stroke-dasharray: 175.93; stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .cd-num   { font-size: 21px; font-weight: 700; position: relative; z-index: 1; }
+
+    .complete-right {
+      display: flex; flex-direction: column; gap: 14px; min-width: 360px;
+    }
+    .summary-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .summary-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 16px;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .sr-lbl { color: var(--text2); font-size: 14px; }
+    .sr-val { font-weight: 600; }
+    .instr-box {
+      background: var(--green-dim); border: 1px solid rgba(13,191,126,.25);
+      border-radius: var(--radius); padding: 15px 22px;
+      font-size: 15px; color: var(--green);
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       ⑤ FAULT
+       ══════════════════════════════════════════════════════════════════════════ */
+    #screen-fault {
+      flex-direction: column; align-items: center; justify-content: center; gap: 30px;
+      background:
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(255,69,58,.06) 0%, transparent 70%),
+        var(--bg);
+    }
+    .fault-icon {
+      width: 112px; height: 112px; border-radius: 50%;
+      background: var(--red-dim); border: 2px solid rgba(255,69,58,.35);
+      display: flex; align-items: center; justify-content: center; font-size: 52px;
+      animation: faultPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes faultPulse {
+      0%, 100% { box-shadow: 0 0 0  0 rgba(255,69,58,.0); }
+      50%       { box-shadow: 0 0 0 22px rgba(255,69,58,.0); }
+    }
+    .fault-title { font-size: 34px; font-weight: 800; color: var(--red); }
+    .fault-sub   { font-size: 17px; color: var(--text2); margin-top: 6px; text-align: center; }
+    .fault-card  {
+      background: var(--surface); border: 1px solid rgba(255,69,58,.3);
+      border-radius: var(--radius); padding: 22px 36px; min-width: 420px; text-align: center;
+    }
+    .fault-code-lbl { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .fault-codes    { font-size: 21px; font-weight: 700; color: var(--red); margin: 12px 0; line-height: 1.6; }
+    .fault-help     { display: flex; gap: 14px; }
+    .help-pill {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 22px;
+      font-size: 14px; color: var(--text2); text-align: center; flex: 1;
+    }
+    .help-pill strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 3px; }
+  </style>
+</head>
+<body>
+
+  <!-- STATUS BAR ─────────────────────────────────────────────────────────── -->
+  <div id="bar">
+    <div class="bar-left">
+      <div class="bar-pill">
+        <div class="dot dot-grey" id="net-dot"></div>
+        <span id="net-label">Cloud</span>
+      </div>
+      <div class="bar-pill">
+        <span>Tank</span>
+        <div class="tank-bar-wrap">
+          <div class="tank-bar-fill" id="tank-fill" style="width:0%"></div>
+        </div>
+        <span id="tank-pct">—</span>
+      </div>
+    </div>
+    <div class="bar-center" id="bar-station">AceRev Station</div>
+    <div class="bar-right">
+      <span id="bar-time" style="font-variant-numeric:tabular-nums"></span>
+    </div>
+  </div>
+
+  <!-- ① IDLE ──────────────────────────────────────────────────────────────── -->
+  <div class="screen active" id="screen-idle">
+    <div class="idle-logo">AceRev &middot; AdBlue Refilling</div>
+    <div class="scan-ring-wrap">
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-icon">📱</div>
+    </div>
+    <div class="idle-title">Scan to Begin</div>
+    <div class="idle-sub">Open the AceRev app and scan the QR code to start dispensing</div>
+    <div class="idle-steps">
+      <div class="idle-step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Open App</strong>Open AceRev on your phone</div>
+      </div>
+      <div class="idle-step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Select Volume</strong>Choose pre-auth amount</div>
+      </div>
+      <div class="idle-step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Scan QR</strong>Tap the scanner icon in the app</div>
+      </div>
+      <div class="idle-step">
+        <div class="step-num">4</div>
+        <div class="step-text"><strong>Insert Nozzle</strong>Flow starts automatically</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② AUTHORIZING ───────────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-auth">
+    <div class="auth-rings">
+      <div class="auth-ring"></div>
+      <div class="auth-ring"></div>
+      <div class="auth-ring"></div>
+      <div class="auth-center">🔑</div>
+    </div>
+    <div>
+      <div class="auth-title">Verifying Account…</div>
+      <div class="auth-sub">Please wait while we connect to your account</div>
+    </div>
+    <div class="auth-txn" id="auth-txn" style="display:none"></div>
+  </div>
+
+  <!-- ③ DISPENSING ────────────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-dispensing">
+
+    <!-- Left: circular gauge -->
+    <div class="disp-left">
+      <div class="disp-section-label">Volume Dispensed</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 300 300">
+          <circle class="gauge-track" cx="150" cy="150" r="130" />
+          <circle class="gauge-arc"   cx="150" cy="150" r="130" id="gauge-arc" />
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-vol" id="gauge-vol">0.00</div>
+          <div class="gauge-unit">litres</div>
+        </div>
+      </div>
+      <div class="flow-live">
+        <div class="flow-pulse-dot"></div>
+        <span class="flow-rate-big" id="disp-rate">0.0</span>
+        <span class="flow-rate-unit">L / min</span>
+      </div>
+    </div>
+
+    <!-- Right: metrics -->
+    <div class="disp-right">
+      <div class="disp-right-title">Live Session</div>
+
+      <div class="mc">
+        <div class="mc-body">
+          <div class="mc-lbl">Elapsed Time</div>
+          <div><span class="mc-val" id="disp-elapsed">0</span><span class="mc-unit">sec</span></div>
+        </div>
+        <div class="mc-icon">⏱</div>
+      </div>
+
+      <div class="mc">
+        <div class="mc-body">
+          <div class="mc-lbl">Pre-auth Limit</div>
+          <div><span class="mc-val" id="disp-limit">—</span><span class="mc-unit">L</span></div>
+        </div>
+        <div class="mc-icon">🎯</div>
+      </div>
+
+      <div class="mc">
+        <div class="mc-body">
+          <div class="mc-lbl">Remaining</div>
+          <div><span class="mc-val" id="disp-remaining">—</span><span class="mc-unit">L</span></div>
+        </div>
+        <div class="mc-icon">💧</div>
+      </div>
+
+      <div class="limit-card">
+        <div class="limit-hdr">
+          <div class="mc-lbl">Progress to Limit</div>
+          <div class="limit-nums">
+            <span id="limit-pct-num">0</span>%<span id="limit-of-label"></span>
+          </div>
+        </div>
+        <div class="lbar-wrap"><div class="lbar-fill" id="lbar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ COMPLETE ───────────────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-complete">
+    <div class="complete-left">
+      <div class="check-circle">
+        <svg viewBox="0 0 60 60" width="60" height="60">
+          <polyline class="checkmark-path" points="10,30 24,44 50,16" />
+        </svg>
+      </div>
+      <div style="text-align:center">
+        <div class="complete-title">Dispense Complete</div>
+        <div class="complete-sub">Remove nozzle and secure the cap</div>
+      </div>
+      <div class="cd-wrap">
+        <svg class="cd-svg" viewBox="0 0 64 64" width="64" height="64">
+          <circle class="cd-track" cx="32" cy="32" r="28" />
+          <circle class="cd-arc"   cx="32" cy="32" r="28" id="cd-arc" />
+        </svg>
+        <div class="cd-num" id="cd-num">10</div>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Returning to home…</div>
+    </div>
+
+    <div class="complete-right">
+      <div class="summary-card">
+        <div class="summary-row">
+          <span class="sr-lbl">Volume Dispensed</span>
+          <span class="sr-val" id="done-vol">— L</span>
+        </div>
+        <div class="summary-row">
+          <span class="sr-lbl">Duration</span>
+          <span class="sr-val" id="done-time">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="sr-lbl">Avg Flow Rate</span>
+          <span class="sr-val" id="done-avg">—</span>
+        </div>
+        <div class="summary-row">
+          <span class="sr-lbl">Reason</span>
+          <span class="sr-val" id="done-reason" style="color:var(--text2)">—</span>
+        </div>
+      </div>
+      <div class="instr-box">
+        <span style="font-size:20px">⚠️</span>
+        <span>Check app for receipt and wallet balance update</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ FAULT ──────────────────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-fault">
+    <div class="fault-icon">⚠</div>
+    <div style="text-align:center">
+      <div class="fault-title">Station Fault</div>
+      <div class="fault-sub">Dispensing has been halted for your safety</div>
+    </div>
+    <div class="fault-card">
+      <div class="fault-code-lbl">Active Fault Codes</div>
+      <div class="fault-codes" id="fault-codes">—</div>
+    </div>
+    <div class="fault-help">
+      <div class="help-pill"><strong>Step 1</strong>Do not attempt to restart</div>
+      <div class="help-pill"><strong>Step 2</strong>Contact station operator</div>
+      <div class="help-pill"><strong>Step 3</strong>Note fault code above</div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ──────────────────────────────────────────────────────────── -->
+  <script>
+    "use strict";
+
+    const API         = 'http://127.0.0.1:8080';
+    const GAUGE_CIRC  = 816.81;   // 2π × 130
+    const CD_CIRC     = 175.93;   // 2π × 28
+    const CD_SECS     = 10;
+
+    let screen       = 'idle';
+    let maxVolume    = null;
+    let lastVolume   = 0;
+    let lastPlcState = null;
+    let cdTimer      = null;
+    let cdLeft       = CD_SECS;
+    let sseSource    = null;
+
+    /* ── Clock ─────────────────────────────────────────────────────────────── */
+    function tick() {
+      const n = new Date();
+      document.getElementById('bar-time').textContent =
+        String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+    }
+    tick(); setInterval(tick, 10000);
+
+    /* ── Screen switch ─────────────────────────────────────────────────────── */
+    function show(name) {
+      if (screen === name) return;
+      if (name === 'complete') _resetCheckAnim();
+      screen = name;
+      document.querySelectorAll('.screen').forEach(e => e.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+    }
+
+    function _resetCheckAnim() {
+      const p = document.querySelector('.checkmark-path');
+      p.style.animation = 'none'; void p.offsetWidth; p.style.animation = '';
+    }
+
+    /* ── Status bar ────────────────────────────────────────────────────────── */
+    function setNet(ok) {
+      document.getElementById('net-dot').className   = 'dot ' + (ok ? 'dot-green' : 'dot-red');
+      document.getElementById('net-label').textContent = ok ? 'Connected' : 'Offline';
+    }
+    function setTank(pct) {
+      const f = document.getElementById('tank-fill');
+      const t = document.getElementById('tank-pct');
+      if (pct == null) { t.textContent = '—'; f.style.width = '0%'; return; }
+      t.textContent   = pct.toFixed(0) + '%';
+      f.style.width   = Math.min(100, pct) + '%';
+      f.style.background = pct < 10 ? 'var(--red)' : pct < 25 ? 'var(--orange)' : 'var(--green)';
+    }
+
+    /* ── Gauge ─────────────────────────────────────────────────────────────── */
+    function setGauge(vol, limit) {
+      const arc = document.getElementById('gauge-arc');
+      const pct = limit ? Math.min(1, vol / limit) : 0;
+      arc.style.strokeDashoffset = GAUGE_CIRC * (1 - pct);
+      arc.classList.toggle('near-limit', pct >= 0.9);
+      document.getElementById('gauge-vol').textContent = vol.toFixed(2);
+
+      const pctNum = Math.round(pct * 100);
+      document.getElementById('lbar').style.width          = pctNum + '%';
+      document.getElementById('limit-pct-num').textContent  = pctNum;
+      document.getElementById('limit-of-label').textContent = limit ? ` of ${limit.toFixed(1)} L` : '';
+      document.getElementById('disp-limit').textContent     = limit ? limit.toFixed(1) : '∞';
+      document.getElementById('disp-remaining').textContent =
+        limit ? Math.max(0, limit - vol).toFixed(2) : '∞';
+    }
+
+    /* ── Dispensing screen update ──────────────────────────────────────────── */
+    function updateDisp(flow, plc) {
+      const vol     = flow?.volumeLitres   ?? 0;
+      const rate    = flow?.flowRateLPM    ?? 0;
+      const elapsed = flow?.elapsedSeconds ?? 0;
+      const limit   = plc?.maxVolume ?? maxVolume;
+      if (limit) maxVolume = limit;
+
+      document.getElementById('disp-rate').textContent    = rate.toFixed(1);
+      document.getElementById('disp-elapsed').textContent = Math.round(elapsed);
+      lastVolume = vol;
+      setGauge(vol, maxVolume);
+    }
+
+    /* ── Complete screen ───────────────────────────────────────────────────── */
+    function showComplete(flow, plc) {
+      const vol     = flow?.volumeLitres   ?? lastVolume ?? 0;
+      const elapsed = flow?.elapsedSeconds ?? 0;
+      const avg     = elapsed > 0 ? ((vol / elapsed) * 60).toFixed(1) : '—';
+
+      document.getElementById('done-vol').textContent    = vol.toFixed(2) + ' L';
+      document.getElementById('done-time').textContent   = Math.round(elapsed) + ' s';
+      document.getElementById('done-avg').textContent    = avg + ' L/min';
+      document.getElementById('done-reason').textContent = plc?.stopReason ?? 'Complete';
+
+      show('complete');
+      startCountdown();
+    }
+
+    function startCountdown() {
+      if (cdTimer) clearInterval(cdTimer);
+      cdLeft = CD_SECS;
+      _updateCd(cdLeft);
+      cdTimer = setInterval(() => {
+        cdLeft--;
+        _updateCd(cdLeft);
+        if (cdLeft <= 0) {
+          clearInterval(cdTimer); cdTimer = null;
+          maxVolume = null; lastVolume = 0; lastPlcState = null;
+          show('idle');
+        }
+      }, 1000);
+    }
+    function _updateCd(s) {
+      document.getElementById('cd-num').textContent          = s;
+      document.getElementById('cd-arc').style.strokeDashoffset = CD_CIRC * (1 - s / CD_SECS);
+    }
+
+    /* ── SSE (real-time flow tick during dispensing) ───────────────────────── */
+    function connectSSE() {
+      if (sseSource) return;
+      sseSource = new EventSource(API + '/events');
+
+      sseSource.addEventListener('flow', e => {
+        const d = JSON.parse(e.data);
+        if (screen !== 'dispensing') show('dispensing');
+        document.getElementById('disp-rate').textContent    = (d.flowRateLPM ?? 0).toFixed(1);
+        document.getElementById('disp-elapsed').textContent = Math.round(d.elapsedSeconds ?? 0);
+        lastVolume = d.volumeLitres ?? 0;
+        setGauge(lastVolume, maxVolume);
+      });
+
+      sseSource.addEventListener('fault', e => {
+        const d = JSON.parse(e.data);
+        document.getElementById('fault-codes').textContent =
+          (d.faults ?? []).join('\n') || 'UNKNOWN';
+        dropSSE(); show('fault');
+      });
+
+      sseSource.addEventListener('complete', e => {
+        const d = JSON.parse(e.data);
+        showComplete(d.flow, d.plc);
+        dropSSE();
+      });
+
+      sseSource.onerror = () => dropSSE();
+    }
+    function dropSSE() {
+      if (sseSource) { sseSource.close(); sseSource = null; }
+    }
+
+    /* ── Polling /status (1 s cadence — state routing) ─────────────────────── */
+    async function poll() {
+      try {
+        const res = await fetch(API + '/status', {
+          signal: AbortSignal.timeout(2000), cache: 'no-store',
+        });
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+
+        setNet(true);
+        document.getElementById('bar-station').textContent = d.stationId ?? 'AceRev Station';
+        setTank(d.plc?.tankLevelPct ?? null);
+        if (d.plc?.maxVolume != null) maxVolume = d.plc.maxVolume;
+
+        const plc = (d.plc?.plcState ?? 'IDLE').toUpperCase();
+        const hw  = (d.state         ?? 'IDLE').toUpperCase();
+        const txn = d.transactionId;
+
+        // Auth txn label
+        const txnEl = document.getElementById('auth-txn');
+        if (txn) { txnEl.textContent = 'TXN: ' + txn; txnEl.style.display = 'block'; }
+        else        { txnEl.style.display = 'none'; }
+
+        if (plc === 'FAULT') {
+          document.getElementById('fault-codes').textContent =
+            (d.plc?.activeFaults ?? []).join('\n') || 'UNKNOWN';
+          dropSSE(); show('fault');
+
+        } else if (plc === 'DISPENSING' || plc === 'STOPPING') {
+          connectSSE();
+          updateDisp(d.flow, d.plc);
+          if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
+          show('dispensing');
+
+        } else if (hw === 'AUTHORIZING') {
+          dropSSE();
+          if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
+          show('auth');
+
+        } else if (plc === 'IDLE' && lastPlcState === 'DISPENSING') {
+          dropSSE();
+          showComplete(d.flow, d.plc);
+
+        } else if (screen !== 'complete' && screen !== 'fault') {
+          dropSSE(); show('idle');
+        }
+
+        lastPlcState = plc;
+      } catch {
+        setNet(false);
+      }
+    }
+
+    poll();
+    setInterval(poll, 1000);
+  </script>
+</body>
+</html>
+
+    /* ── Screen system ───────────────────────────────────────────────────── */
+    .screen {
+      position: absolute; inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+      gap: 24px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ── Status bar ──────────────────────────────────────────────────────── */
+    #status-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 48px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-size: 13px;
+      color: var(--muted);
+      z-index: 100;
+    }
+    #status-bar .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .dot.green { background: var(--green); }
+    .dot.red   { background: var(--red); }
+    .dot.grey  { background: var(--muted); }
+
+    body > .screen { top: 48px; }
+
+    /* ── Typography ──────────────────────────────────────────────────────── */
+    .title     { font-size: 36px; font-weight: 700; letter-spacing: -0.5px; }
+    .subtitle  { font-size: 18px; color: var(--muted); }
+    .value     { font-size: 72px; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+    .value-unit { font-size: 24px; font-weight: 400; color: var(--muted); }
+    .label     { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 32px;
+      width: 100%; max-width: 480px;
+    }
+    .card-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-row:last-child { border-bottom: none; }
+
+    /* ── Metrics row ─────────────────────────────────────────────────────── */
+    .metrics {
+      display: flex; gap: 16px; width: 100%; max-width: 560px;
+    }
+    .metric {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .metric .val  { font-size: 36px; font-weight: 700; }
+    .metric .lbl  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    .progress-wrap {
+      width: 100%; max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      height: 12px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 999px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    /* ── Spinner ─────────────────────────────────────────────────────────── */
+    .spinner {
+      width: 56px; height: 56px;
+      border: 4px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Icon circles ────────────────────────────────────────────────────── */
+    .icon-circle {
+      width: 96px; height: 96px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .icon-circle.green  { background: rgba(13,191,126,.15); }
+    .icon-circle.red    { background: rgba(255,59,48,.15); }
+    .icon-circle.orange { background: rgba(255,149,0,.15); }
+    .icon-circle.blue   { background: rgba(26,107,255,.15); }
+
+    /* ── Tank level badge ────────────────────────────────────────────────── */
+    #tank-level-badge {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── QR placeholder ──────────────────────────────────────────────────── */
+    .qr-box {
+      width: 160px; height: 160px;
+      border: 3px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 64px;
+    }
+
+    /* ── Colour accents ──────────────────────────────────────────────────── */
+    .text-green  { color: var(--green); }
+    .text-red    { color: var(--red); }
+    .text-orange { color: var(--orange); }
+    .text-blue   { color: var(--blue); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Status bar (always visible) ──────────────────────────────────────── -->
+  <div id="status-bar">
+    <span>
+      <span class="dot grey" id="mqtt-dot"></span>
+      <span id="mqtt-label">Cloud</span>
+    </span>
+    <span id="station-id">AceRev Station</span>
+    <span id="tank-level-badge">Tank: —</span>
+  </div>
+
+  <!-- ── IDLE screen ───────────────────────────────────────────────────────── -->
+  <div class="screen active" id="screen-idle">
+    <div class="qr-box">📱</div>
+    <div>
+      <div class="title">Scan to Refill</div>
+      <div class="subtitle" style="margin-top:8px">Open the AceRev app and scan the QR code</div>
+    </div>
+    <div class="card" style="max-width:320px">
+      <div class="card-row">
+        <span class="label">Tank Level</span>
+        <span id="idle-tank" class="text-green" style="font-weight:600">— %</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Status</span>
+        <span class="text-green" style="font-weight:600">Ready</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AUTHORIZING screen ────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-auth">
+    <div class="spinner"></div>
+    <div>
+      <div class="title">Connecting…</div>
+      <div class="subtitle" style="margin-top:8px">Verifying your account</div>
+    </div>
+  </div>
+
+  <!-- ── DISPENSING screen ─────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-dispensing">
+    <div class="label">Volume Dispensed</div>
+    <div>
+      <span class="value text-green" id="disp-volume">0.00</span>
+      <span class="value-unit"> L</span>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="val text-blue" id="disp-rate">0.0</div>
+        <div class="lbl">L / min</div>
+      </div>
+      <div class="metric">
+        <div class="val" id="disp-elapsed">0</div>
+        <div class="lbl">Seconds</div>
+      </div>
+      <div class="metric">
+        <div class="val" id="disp-limit">—</div>
+        <div class="lbl">Limit (L)</div>
+      </div>
+    </div>
+    <div class="label" style="margin-top:4px">Progress to limit</div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="disp-progress"></div>
+    </div>
+  </div>
+
+  <!-- ── COMPLETE screen ───────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-complete">
+    <div class="icon-circle green">✓</div>
+    <div>
+      <div class="title">Dispense Complete</div>
+      <div class="subtitle" style="margin-top:8px">Remove nozzle and secure cap</div>
+    </div>
+    <div class="card" style="max-width:320px">
+      <div class="card-row">
+        <span class="label">Volume</span>
+        <span id="done-volume" style="font-weight:700">— L</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Duration</span>
+        <span id="done-elapsed">— s</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Reason</span>
+        <span id="done-reason" style="color:var(--muted)">—</span>
+      </div>
+    </div>
+    <div class="subtitle" style="font-size:14px;opacity:.6" id="complete-countdown">
+      Returning to home in 10s…
+    </div>
+  </div>
+
+  <!-- ── FAULT screen ───────────────────────────────────────────────────────── -->
+  <div class="screen" id="screen-fault">
+    <div class="icon-circle red">⚠</div>
+    <div>
+      <div class="title text-red">Station Fault</div>
+      <div class="subtitle" style="margin-top:8px">Dispensing has been halted</div>
+    </div>
+    <div class="card" style="max-width:380px">
+      <div class="card-row">
+        <span class="label">Fault</span>
+        <span id="fault-code" class="text-red" style="font-weight:600">—</span>
+      </div>
+      <div class="card-row">
+        <span class="label">Support</span>
+        <span style="color:var(--muted);font-size:13px">Contact operator</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    const API = 'http://127.0.0.1:8080';
+    let currentScreen = 'idle';
+    let maxVolume = null;
+    let completeTimer = null;
+
+    // ── Screen switching ──────────────────────────────────────────────────────
+    function showScreen(name) {
+      if (currentScreen === name) return;
+      currentScreen = name;
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+    }
+
+    // ── Status bar helpers ────────────────────────────────────────────────────
+    function setMqttDot(connected) {
+      const dot = document.getElementById('mqtt-dot');
+      dot.className = 'dot ' + (connected ? 'green' : 'red');
+      document.getElementById('mqtt-label').textContent = connected ? 'Connected' : 'Offline';
+    }
+
+    function setTankLevel(pct) {
+      const el = document.getElementById('tank-level-badge');
+      const idleEl = document.getElementById('idle-tank');
+      if (pct === null || pct === undefined) { el.textContent = 'Tank: —'; return; }
+      const s = pct.toFixed(0) + '%';
+      el.textContent = 'Tank: ' + s;
+      if (idleEl) {
+        idleEl.textContent = s;
+        idleEl.style.color = pct < 10 ? 'var(--red)' : pct < 25 ? 'var(--orange)' : 'var(--green)';
+      }
+    }
+
+    // ── Complete screen countdown ──────────────────────────────────────────── 
+    function startCompleteCountdown() {
+      if (completeTimer) clearInterval(completeTimer);
+      let secs = 10;
+      const el = document.getElementById('complete-countdown');
+      el.textContent = `Returning to home in ${secs}s…`;
+      completeTimer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          clearInterval(completeTimer);
+          showScreen('idle');
+        } else {
+          el.textContent = `Returning to home in ${secs}s…`;
+        }
+      }, 1000);
+    }
+
+    // ── Poll /status every second ─────────────────────────────────────────────
+    async function poll() {
+      try {
+        const res = await fetch(API + '/status', { signal: AbortSignal.timeout(2000) });
+        if (!res.ok) throw new Error('status ' + res.status);
+        const d = await res.json();
+
+        // Update station ID
+        document.getElementById('station-id').textContent = d.stationId || 'AceRev Station';
+
+        // Tank level (prefer plc data, fallback to top-level)
+        const tank = d.plc?.tankLevelPct ?? null;
+        setTankLevel(tank);
+        setMqttDot(true);
+
+        const plcState = (d.plc?.plcState || 'IDLE').toUpperCase();
+        const hwState  = (d.state || 'IDLE').toUpperCase();
+
+        // ── Screen logic based on PLC state ────────────────────────────────
+        if (plcState === 'FAULT') {
+          const faults = d.plc?.activeFaults || [];
+          document.getElementById('fault-code').textContent =
+            faults.length ? faults.join(', ') : 'UNKNOWN';
+          showScreen('fault');
+
+        } else if (plcState === 'DISPENSING' || plcState === 'STOPPING') {
+          const vol = d.flow?.volumeLitres ?? 0;
+          const rate = d.flow?.flowRateLPM ?? 0;
+          const elapsed = d.flow?.elapsedSeconds ?? 0;
+          const limit = d.plc?.maxVolume ?? maxVolume;
+
+          document.getElementById('disp-volume').textContent  = vol.toFixed(2);
+          document.getElementById('disp-rate').textContent    = rate.toFixed(1);
+          document.getElementById('disp-elapsed').textContent = Math.round(elapsed);
+          document.getElementById('disp-limit').textContent   = limit ? limit.toFixed(1) : '∞';
+
+          if (limit) {
+            const pct = Math.min(100, (vol / limit) * 100);
+            document.getElementById('disp-progress').style.width = pct + '%';
+          } else {
+            document.getElementById('disp-progress').style.width = '0%';
+          }
+          if (completeTimer) { clearInterval(completeTimer); completeTimer = null; }
+          showScreen('dispensing');
+
+        } else if (hwState === 'AUTHORIZING') {
+          if (completeTimer) { clearInterval(completeTimer); completeTimer = null; }
+          showScreen('auth');
+
+        } else if (hwState === 'COMPLETE' || plcState === 'IDLE' && currentScreen === 'dispensing') {
+          // Transition from dispensing → complete
+          const vol = d.flow?.volumeLitres ?? 0;
+          const elapsed = d.flow?.elapsedSeconds ?? 0;
+          document.getElementById('done-volume').textContent  = vol.toFixed(2) + ' L';
+          document.getElementById('done-elapsed').textContent = Math.round(elapsed) + ' s';
+          document.getElementById('done-reason').textContent  = d.plc?.stopReason || 'Complete';
+          showScreen('complete');
+          startCompleteCountdown();
+
+        } else if (currentScreen !== 'complete' && currentScreen !== 'fault') {
+          showScreen('idle');
+        }
+
+      } catch (err) {
+        // API unreachable — show offline indicator but keep current screen
+        setMqttDot(false);
+      }
+    }
+
+    // Start polling immediately, then every 1 second
+    poll();
+    setInterval(poll, 1000);
+  </script>
+</body>
+</html>

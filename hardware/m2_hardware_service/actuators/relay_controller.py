@@ -1,25 +1,24 @@
 """
-relay_controller.py — GPIO relay control for pump motor and solenoid valve.
+relay_controller.py — GPIO relay control for the pump motor.
 
 Hardware: 4-Channel Opto-isolated Relay Module (BOM C4, 5V coil).
 The M2's 3.3V GPIO triggers the opto-isolator input directly.
 
+The Piusi Suzzarablue AC pump has a built-in bypass valve, so the pump relay
+is the SOLE flow-control mechanism.  No solenoid valve relay is needed.
+
 Active-high vs active-low:
   Most Chinese opto-isolated relay boards are ACTIVE-LOW (energise relay by
-  pulling the IN pin LOW).  Set PUMP_RELAY_ACTIVE_HIGH=false / 
-  VALVE_RELAY_ACTIVE_HIGH=false in .env for those boards.
-  If your relay board energises on HIGH, set to true (default).
+  pulling the IN pin LOW).  Set PUMP_RELAY_ACTIVE_HIGH=false in .env for those
+  boards.  If your relay board energises on HIGH, set to true.
 
 GPIO wiring (ODROID-M2 40-pin → relay board):
-  Pump  relay IN ──── GPIO line (pump_relay_line)
-  Valve relay IN ──── GPIO line (valve_relay_line)
-  Relay board VCC ─── 3.3V (or 5V if relay board requires — check board label)
-  Relay board GND ─── GND
+  Pump relay IN ──── GPIO line (pump_relay_line)
+  Relay board VCC ── 3.3V (or 5V if relay board requires — check board label)
+  Relay board GND ── GND
 
 Safety design:
-  - Both relays default to OFF (de-energised) on startup and on any error.
-  - The pump relay should ONLY be energised when the valve relay is also open.
-    This is enforced in HardwareManager, not here.
+  - Relay defaults to OFF (de-energised) on startup and on any error.
 
 STUB mode: logs relay state changes without touching GPIO.
 """
@@ -33,17 +32,15 @@ logger = logging.getLogger(__name__)
 
 class RelayController:
     """
-    Controls the pump motor relay and solenoid valve relay via GPIO output lines.
+    Controls the pump motor relay via a single GPIO output line.
 
     Usage:
         relay = RelayController(cfg)
-        relay.open()            # claim GPIO lines, default both OFF
+        relay.open()        # claim GPIO line, default OFF
         relay.pump_on()
-        relay.valve_open()
         # ... dispense ...
-        relay.valve_close()
         relay.pump_off()
-        relay.close()           # release GPIO, both forced OFF
+        relay.close()       # release GPIO, relay forced OFF
     """
 
     def __init__(self, cfg) -> None:
@@ -52,18 +49,16 @@ class RelayController:
         self._lock  = threading.Lock()
 
         # GPIO line handles (REAL mode)
-        self._pump_line:  Optional[object] = None
-        self._valve_line: Optional[object] = None
-        self._chip:       Optional[object] = None
+        self._pump_line: Optional[object] = None
+        self._chip:      Optional[object] = None
 
         # State tracking
-        self._pump_on_state  = False
-        self._valve_on_state = False
+        self._pump_on_state = False
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def open(self) -> None:
-        """Claim GPIO output lines and default both relays to OFF."""
+        """Claim GPIO output line and default pump relay to OFF."""
         if self._stub:
             logger.info("RelayController: STUB mode — GPIO not opened")
             return
@@ -80,17 +75,9 @@ class RelayController:
                 default_vals=[self._off_value(self._cfg.pump_relay_active_high)],
             )
 
-            self._valve_line = self._chip.get_line(self._cfg.valve_relay_line)
-            self._valve_line.request(
-                consumer="valve-relay",
-                type=gpiod.LINE_REQ_DIR_OUT,
-                default_vals=[self._off_value(self._cfg.valve_relay_active_high)],
-            )
-
             logger.info(
-                "RelayController: GPIO opened — pump line=%d, valve line=%d on %s",
+                "RelayController: GPIO opened — pump line=%d on %s",
                 self._cfg.pump_relay_line,
-                self._cfg.valve_relay_line,
                 self._cfg.gpio_chip,
             )
         except Exception as exc:
@@ -98,23 +85,21 @@ class RelayController:
             raise
 
     def close(self) -> None:
-        """Force both relays OFF and release GPIO lines."""
+        """Force pump relay OFF and release GPIO line."""
         self._set_pump(False)
-        self._set_valve(False)
 
-        for line in (self._pump_line, self._valve_line):
-            if line:
-                try:
-                    line.release()
-                except Exception:
-                    pass
+        if self._pump_line:
+            try:
+                self._pump_line.release()
+            except Exception:
+                pass
         if self._chip:
             try:
                 self._chip.close()
             except Exception:
                 pass
-        self._pump_line = self._valve_line = self._chip = None
-        logger.info("RelayController: closed — both relays forced OFF")
+        self._pump_line = self._chip = None
+        logger.info("RelayController: closed — pump relay forced OFF")
 
     # ── Pump relay ────────────────────────────────────────────────────────────
 
@@ -129,20 +114,6 @@ class RelayController:
     @property
     def pump_is_on(self) -> bool:
         return self._pump_on_state
-
-    # ── Valve relay ───────────────────────────────────────────────────────────
-
-    def valve_open(self) -> None:
-        """Energise the solenoid valve relay (open valve — allow flow)."""
-        self._set_valve(True)
-
-    def valve_close(self) -> None:
-        """De-energise the solenoid valve relay (close valve — stop flow)."""
-        self._set_valve(False)
-
-    @property
-    def valve_is_open(self) -> bool:
-        return self._valve_on_state
 
     # ── Internal ─────────────────────────────────────────────────────────────
 
@@ -161,22 +132,6 @@ class RelayController:
                     logger.debug("Pump relay GPIO: %s", "ON" if on else "OFF")
                 except Exception as exc:
                     logger.error("Pump relay set error: %s", exc)
-
-    def _set_valve(self, on: bool) -> None:
-        with self._lock:
-            self._valve_on_state = on
-            if self._stub:
-                logger.info("Valve relay: %s [STUB]", "OPEN" if on else "CLOSED")
-                return
-            if self._valve_line:
-                try:
-                    self._valve_line.set_value(
-                        self._on_value(self._cfg.valve_relay_active_high) if on
-                        else self._off_value(self._cfg.valve_relay_active_high)
-                    )
-                    logger.debug("Valve relay GPIO: %s", "OPEN" if on else "CLOSED")
-                except Exception as exc:
-                    logger.error("Valve relay set error: %s", exc)
 
     @staticmethod
     def _on_value(active_high: bool) -> int:

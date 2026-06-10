@@ -5,16 +5,16 @@ Handles:
   - Connection lifecycle (connect, reconnect on drop)
   - Publishing telemetry and status messages
   - Subscribing to command topics
-  - Structured topic naming:  acerev/stations/{station_id}/{subtopic}
+    - Structured topic naming:  bluediesel/stations/{station_id}/{subtopic}
 
 Topic schema
 ────────────
-  acerev/stations/{id}/commands        ← backend → RPi (dispense, stop, ping)
-  acerev/stations/{id}/telemetry/flow  ← RPi → backend (volume, rate, elapsed)
-  acerev/stations/{id}/telemetry/status← RPi → backend (IDLE, DISPENSING, ALARM…)
-  acerev/stations/{id}/heartbeat       ← RPi → backend (keepalive every 30 s)
-  acerev/stations/{id}/auth/challenge  ← RPi → backend (pump auth code ready)
-  acerev/stations/{id}/auth/response   ← backend → RPi (code accepted/rejected)
+    bluediesel/stations/{id}/commands        ← backend → RPi (dispense, stop, ping)
+    bluediesel/stations/{id}/telemetry/flow  ← RPi → backend (volume, rate, elapsed)
+    bluediesel/stations/{id}/telemetry/status← RPi → backend (IDLE, DISPENSING, ALARM…)
+    bluediesel/stations/{id}/heartbeat       ← RPi → backend (keepalive every 30 s)
+    bluediesel/stations/{id}/auth/challenge  ← RPi → backend (pump auth code ready)
+    bluediesel/stations/{id}/auth/response   ← backend → RPi (code accepted/rejected)
 """
 
 import json
@@ -54,7 +54,7 @@ class MQTTClient:
             cert_filepath=cfg.cert_path,
             pri_key_filepath=cfg.key_path,
             ca_filepath=cfg.ca_path,
-            client_id=f"acerev-station-{cfg.station_id}",
+            client_id=f"bluediesel-station-{cfg.station_id}",
             clean_session=False,
             keep_alive_secs=30,
             on_connection_interrupted=self._on_interrupted,

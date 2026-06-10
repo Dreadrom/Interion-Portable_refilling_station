@@ -10,7 +10,7 @@
 
 ## Step 1: Install Additional Dependencies
 
-Run the following command in the `New_App/portable-refill-app` directory:
+Run the following command in the `portable-refill-app` directory:
 
 ```bash
 npm install axios zustand @tanstack/react-query expo-secure-store react-native-qrcode-svg date-fns
@@ -62,7 +62,7 @@ This will open Expo Developer Tools. You can then:
 After setup, your project structure should look like this:
 
 ```
-New_App/portable-refill-app/
+portable-refill-app/
 ├── app/                          # Expo Router screens
 │   ├── (auth)/                  # Auth screens (to be created)
 │   ├── (main)/                  # Main app screens (to be created)
@@ -201,6 +201,6 @@ npx tsc --noEmit
 ---
 
 **For questions or issues, refer to**:
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture
-- [PROMPTS.md](../PROMPTS.md) - Development history
+- [ARCHITECTURE.md](../docs/architecture/ARCHITECTURE.md) - System architecture
+- [PROMPTS.md](../docs/operations/PROMPTS.md) - Development history
 - [Expo Documentation](https://docs.expo.dev/)

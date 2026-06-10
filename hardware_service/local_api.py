@@ -66,3 +66,18 @@ def sim_stop():
         return jsonify({"error": "controller not initialised"}), 503
     _controller._handle_stop({"reason": "SIMULATION_STOP"})
     return jsonify({"ok": True})
+
+
+@app.post("/simulate/confirm-auth")
+def sim_confirm_auth():
+    """Simulate backend confirming user entered correct auth code"""
+    if os.getenv("NODE_ENV") == "production":
+        return jsonify({"error": "simulation disabled in production"}), 403
+    if not _controller:
+        return jsonify({"error": "controller not initialised"}), 503
+    data = request.get_json(force=True) or {}
+    _controller._on_auth_response("auth/response", {
+        "accepted": data.get("accepted", True),
+        "transactionId": data.get("transactionId", _controller._txn_id),
+    })
+    return jsonify({"ok": True})

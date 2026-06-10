@@ -1,4 +1,4 @@
-# AceRev Hardware Gateway Service
+# BlueDiesel Hardware Gateway Service
 
 Python service that runs on the station's Ubuntu microcontroller (e.g. Raspberry Pi 5). It bridges the cloud backend (AWS IoT Core) and the physical dispensing hardware (solenoid valve, flow meter, display).
 
@@ -46,7 +46,7 @@ Set `HARDWARE_MODE` in `.env`:
 
 ## MQTT Topic Schema
 
-All topics follow the pattern: `acerev/stations/{STATION_ID}/{subtopic}`
+All topics follow the pattern: `bluediesel/stations/{STATION_ID}/{subtopic}`
 
 | Topic | Direction | Payload |
 |---|---|---|
@@ -102,9 +102,9 @@ POST http://localhost:8080/simulate/stop       # force stop (non-prod)
 ## Running as a systemd Service (Ubuntu)
 
 ```ini
-# /etc/systemd/system/acerev-gateway.service
+# /etc/systemd/system/bluediesel-gateway.service
 [Unit]
-Description=AceRev Hardware Gateway
+Description=BlueDiesel Hardware Gateway
 After=network-online.target
 Wants=network-online.target
 
@@ -122,7 +122,7 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo systemctl enable acerev-gateway
-sudo systemctl start  acerev-gateway
-sudo journalctl -u acerev-gateway -f   # follow logs
+sudo systemctl enable bluediesel-gateway
+sudo systemctl start  bluediesel-gateway
+sudo journalctl -u bluediesel-gateway -f   # follow logs
 ```

@@ -29,6 +29,10 @@ export interface Payment {
   qrCodeData?: string; // QR code string for display
   qrCodeImageUrl?: string; // Optional QR image URL from Fiuu
   
+  // Fiuu hosted payment page
+  paymentUrl?: string; // URL to redirect user for payment
+  paymentData?: Record<string, string>; // Form data for payment page
+  
   // Timestamps
   createdAt: string;
   updatedAt?: string;
@@ -45,6 +49,7 @@ export interface CreatePaymentRequest {
   amount: number;
   currency: string;
   method: PaymentMethod;
+  channel?: string;
   description?: string;
   
   // Optional metadata for tracking
@@ -52,6 +57,7 @@ export interface CreatePaymentRequest {
     product?: string;
     volumeLitres?: number;
     unitPrice?: number;
+    channel?: string;
   };
 }
 

@@ -61,7 +61,7 @@ def _load() -> Config:
         cert_path=os.environ["IOT_CERT_PATH"],
         key_path=os.environ["IOT_KEY_PATH"],
         ca_path=os.environ["IOT_CA_PATH"],
-        mqtt_topic_prefix=os.getenv("MQTT_TOPIC_PREFIX", "acerev/stations"),
+        mqtt_topic_prefix=os.getenv("MQTT_TOPIC_PREFIX", "bluediesel/stations"),
 
         hardware_mode=os.getenv("HARDWARE_MODE", "STUB").upper(),
 

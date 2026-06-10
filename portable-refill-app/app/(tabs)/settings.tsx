@@ -1,16 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import {
   defaultNetworkSettings,
   NetworkSettings
 } from '../../src/network/NetworkSettings';
+import { useAuthStore } from '../../src/stores/useAuthStore';
 
 const STORAGE_KEY = 'PTS_CONNECTION_SETTINGS';
 
 export default function SettingsScreen() {
+  const { logout } = useAuthStore();
   const [settings, setSettings] = useState<NetworkSettings>(defaultNetworkSettings);
 
   useEffect(() => {
@@ -29,8 +32,36 @@ export default function SettingsScreen() {
     router.back();
   };
 
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of this account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
+      {/* Back Button */}
+      <View style={styles.backButtonRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>Settings</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
+      <View style={styles.contentWrapper}>
       <Text style={styles.header}>Network Settings</Text>
 
       <Text>Host</Text>
@@ -115,6 +146,12 @@ export default function SettingsScreen() {
       <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
         <Text>Save</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -122,9 +159,32 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 4,
+  },
+  screenTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  contentWrapper: {
+    flex: 1,
     padding: 24,
     backgroundColor: '#fff',
-},
+  },
   header: { fontSize: 18, fontWeight: '700', marginBottom: 20 },
   input: {
     borderWidth: 1,
@@ -154,5 +214,21 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
     borderRadius: 10,
+  },
+  signOutButton: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  signOutText: {
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });

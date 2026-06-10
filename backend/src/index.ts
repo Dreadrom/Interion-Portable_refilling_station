@@ -3,12 +3,20 @@
  * Wraps AWS Lambda handlers for traditional Node.js deployment
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load environment variables explicitly
+config({ path: resolve(__dirname, '../.env') });
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { handler as authHandler } from './handlers/AuthHandler';
 import { handler as stationsHandler } from './handlers/StationsHandler';
+import { handler as transactionsHandler } from './handlers/TransactionsHandler';
+import { handler as paymentHandler } from './handlers/PaymentHandler';
+import { testEmailConfiguration } from './utils/email';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -125,8 +133,14 @@ app.post('/auth/login', wrapLambdaHandler(authHandler));
 app.get('/auth/me', wrapLambdaHandler(authHandler));
 app.post('/auth/forgot-password', wrapLambdaHandler(authHandler));
 app.post('/auth/reset-password', wrapLambdaHandler(authHandler));
+app.post('/auth/verify-email', wrapLambdaHandler(authHandler));
+app.post('/auth/resend-verification', wrapLambdaHandler(authHandler));
 app.post('/auth/refresh', wrapLambdaHandler(authHandler));
 app.post('/auth/logout', wrapLambdaHandler(authHandler));
+
+// User routes (profile management)
+app.post('/user/update', wrapLambdaHandler(authHandler));
+app.post('/user/change-password', wrapLambdaHandler(authHandler));
 
 // Station routes
 app.get('/stations', wrapLambdaHandler(stationsHandler));
@@ -134,6 +148,17 @@ app.get('/stations/:id', wrapLambdaHandler(stationsHandler));
 app.get('/stations/:id/tanks', wrapLambdaHandler(stationsHandler));
 app.get('/stations/:id/prices', wrapLambdaHandler(stationsHandler));
 app.get('/stations/:id/totalizers', wrapLambdaHandler(stationsHandler));
+
+// Transaction routes
+app.get('/transactions', wrapLambdaHandler(transactionsHandler));
+app.get('/transactions/:id', wrapLambdaHandler(transactionsHandler));
+
+// Payment routes
+app.post('/payment/create', wrapLambdaHandler(paymentHandler));
+app.get('/payment/:id', wrapLambdaHandler(paymentHandler));
+app.post('/payment/fiuu/return', wrapLambdaHandler(paymentHandler));
+app.post('/payment/fiuu/notify', wrapLambdaHandler(paymentHandler));
+app.post('/payment/fiuu/callback', wrapLambdaHandler(paymentHandler));
 
 // 404 handler
 app.use((req, res) => {
@@ -153,7 +178,7 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`
 ╔════════════════════════════════════════════════╗
 ║   Portable Refill Station API Server          ║
@@ -161,6 +186,15 @@ app.listen(PORT, () => {
 ║   Environment: ${process.env.NODE_ENV || 'development'}                  ║
 ╚════════════════════════════════════════════════╝
   `);
+  
+  // Test email configuration
+  console.log('Testing email configuration...');
+  const emailConfigValid = await testEmailConfiguration();
+  if (emailConfigValid) {
+    console.log('✅ Email service ready (Postmark SMTP)');
+  } else {
+    console.warn('⚠️  Email service not configured or unavailable');
+  }
 });
 
 // Graceful shutdown

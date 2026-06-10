@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { globalStyles } from '../../src/styles/globalStyles';
+import { env, isDevelopment } from '../../src/config/env';
 import { getStations, getStationById } from '../../src/api/stations';
 import { StationDetail, TankStatus, Pump } from '../../src/types';
 import { DEMO_STATIONS } from '../../src/data/demoStations';
@@ -42,6 +43,8 @@ export default function NearbyStationsScreen() {
     }, [hasPermission])
   );
 
+  const useDemoStations = env.enableMockApi || isDevelopment;
+
   const getLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -55,6 +58,14 @@ export default function NearbyStationsScreen() {
   };
 
   const fetchNearbyStations = async (useLocation: boolean = true) => {
+    if (useDemoStations) {
+      setStations([...DEMO_STATIONS]);
+      setLoading(false);
+      setRefreshing(false);
+      setError(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -222,7 +233,7 @@ export default function NearbyStationsScreen() {
           </View>
 
           <View style={styles.tanksContainer}>
-            <Text style={styles.tanksTitle}>AdBlue by AceRev:</Text>
+            <Text style={styles.tanksTitle}>AdBlue by BlueDiesel:</Text>
             {station.tankStatus && station.tankStatus.length > 0 ? (
               station.tankStatus.map((tank) => (
                 <View key={tank.id} style={styles.tankRow}>
@@ -316,8 +327,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
-  contentContainer: {
+  backButton: {
+    padding: 4,
+  },
+  screenTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },  contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },

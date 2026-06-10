@@ -1,0 +1,19 @@
+BlueDiesel Refill Kiosk - Alpha Release v1.0.0
+
+Welcome to the alpha testing phase! This release focuses on core functionality and user experience.
+
+Currently Available:
+✅ User registration and secure login
+✅ Profile management and password changes
+✅ Clean, intuitive interface
+✅ Full app navigation and UI flows
+
+Coming Soon:
+🔄 Live station data (hardware deployment in progress)
+🔄 QR code scanning and refueling operations
+🔄 Payment processing and wallet features
+
+What to Test:
+Please focus on creating an account, exploring the app, and reporting any crashes, UI issues, or feedback about the user experience.
+
+Station locations will appear once our physical refill stations are deployed. Thank you for being an early tester!

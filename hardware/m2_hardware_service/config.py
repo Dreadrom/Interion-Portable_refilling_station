@@ -49,14 +49,12 @@ class M2Config:
 
     # ── Pump motor relay GPIO line ────────────────────────────────────────────
     # Driving a 4-ch opto-isolated relay board (BOM C4).
+    # The Piusi Suzzarablue AC pump has a built-in bypass valve, so this relay
+    # is the SOLE flow-control mechanism.  No solenoid valve relay is used.
     # Set active_high=True if HIGH level energises the relay coil.
     # Many opto-isolated boards are active-LOW — set False in that case.
     pump_relay_line:        int
     pump_relay_active_high: bool
-
-    # ── Solenoid valve relay GPIO line ───────────────────────────────────────
-    valve_relay_line:        int
-    valve_relay_active_high: bool
 
     # ── Limit switch GPIO line ────────────────────────────────────────────────
     # Wire as Normally-Closed (NC).  Pull-up enabled internally.
@@ -112,10 +110,6 @@ def _load() -> M2Config:
         # Pump relay — GPIO1_A6 (line 6) default
         pump_relay_line=int(os.getenv("PUMP_RELAY_LINE", "6")),
         pump_relay_active_high=os.getenv("PUMP_RELAY_ACTIVE_HIGH", "true").lower() == "true",
-
-        # Valve relay — GPIO1_A7 (line 7) default
-        valve_relay_line=int(os.getenv("VALVE_RELAY_LINE", "7")),
-        valve_relay_active_high=os.getenv("VALVE_RELAY_ACTIVE_HIGH", "true").lower() == "true",
 
         # Limit switch — GPIO1_B0 (line 8) default
         limit_switch_line=int(os.getenv("LIMIT_SWITCH_LINE", "8")),

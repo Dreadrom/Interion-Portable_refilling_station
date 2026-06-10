@@ -5,12 +5,14 @@ Evaluates all safety conditions every PLC scan cycle and sets a single
 `permits_dispense` output bit.  If ANY interlock is faulted, dispensing
 is immediately blocked and the active fault codes are published.
 
+No solenoid valve in this system — flow is pump-only (Suzzarablue AC has
+built-in bypass).  VALVE_SEQUENCE_FAULT interlock is therefore removed.
+
 Interlocks checked (in priority order):
   1. LIMIT_SWITCH_TRIPPED   — NC limit switch open (overflow / nozzle-out / door)
   2. TANK_LEVEL_EMPTY       — tank level ≤ LOW_LEVEL_PCT threshold
   3. PUMP_DUTY_EXCEEDED     — pump in COOLING_DOWN state (not safe to run)
-  4. VALVE_SEQUENCE_FAULT   — valve open while pump not running
-  5. BACKFLOW_DETECTED      — MK325 CH2 leads CH1 (reverse flow)
+  4. BACKFLOW_DETECTED      — MK325 CH2 leads CH1 (reverse flow)
 
 Adding a new interlock:
   1. Add a FaultCode entry.
@@ -34,7 +36,6 @@ class FaultCode(Enum):
     LIMIT_SWITCH_TRIPPED  = "LIMIT_SWITCH_TRIPPED"
     TANK_LEVEL_EMPTY      = "TANK_LEVEL_EMPTY"
     PUMP_DUTY_EXCEEDED    = "PUMP_DUTY_EXCEEDED"
-    VALVE_SEQUENCE_FAULT  = "VALVE_SEQUENCE_FAULT"
     BACKFLOW_DETECTED     = "BACKFLOW_DETECTED"
 
 
@@ -57,7 +58,6 @@ class InterLockChain:
             limit_tripped=...,
             tank_level_pct=...,
             pump=pump_sequencer,
-            valve=valve_controller,
             pulser=mk325_pulser,
         )
         if not result.permits_dispense:
@@ -75,8 +75,8 @@ class InterLockChain:
         limit_tripped:  bool,
         tank_level_pct: Optional[float],
         pump,           # PumpSequencer
-        valve,          # ValveController
         pulser,         # MK325Pulser
+        valve=None,     # unused — retained for call-site compatibility
     ) -> InterLockResult:
         faults: list[FaultCode] = []
 
@@ -102,16 +102,11 @@ class InterLockChain:
         if pump.state == PumpState.COOLING_DOWN:
             faults.append(FaultCode.PUMP_DUTY_EXCEEDED)
 
-        # ── 4. Valve sequence fault ───────────────────────────────────────────
-        # Valve should never be open while pump is not running
-        if valve.is_open and not pump.is_running:
-            faults.append(FaultCode.VALVE_SEQUENCE_FAULT)
-
-        # ── 5. Backflow detection ────────────────────────────────────────────
+        # ── 4. Backflow detection ────────────────────────────────────────────
         if pulser.is_reverse_flow():
             faults.append(FaultCode.BACKFLOW_DETECTED)
 
-        # ── Log new faults ────────────────────────────────────────────────────
+        # ── Log new / cleared faults ──────────────────────────────────────────
         prev_faults = set(self._last_result.active_faults)
         curr_faults = set(faults)
 

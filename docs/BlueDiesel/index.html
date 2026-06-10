@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BlueDiesel Legal Documents & Consent</title>
+<style>
+  :root {
+    --bg: #f4f7f2;
+    --panel: #ffffff;
+    --ink: #183028;
+    --muted: #5f726a;
+    --line: #d6e1db;
+    --brand: #0f7b68;
+    --brand-dark: #0b5c4e;
+    --warn: #8a5b00;
+    --warn-bg: #fff4d6;
+    --ok: #0f6b3a;
+    --ok-bg: #e8f6ee;
+    --shadow: 0 18px 45px rgba(20, 45, 37, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background:
+      radial-gradient(circle at top right, rgba(15, 123, 104, 0.10), transparent 26%),
+      linear-gradient(180deg, #f8fbf7 0%, var(--bg) 100%);
+    color: var(--ink);
+  }
+
+  .shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 20px 64px;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #163a2f 0%, #0f7b68 100%);
+    color: #fff;
+    border-radius: 24px;
+    padding: 36px 32px;
+    box-shadow: var(--shadow);
+  }
+
+  .eyebrow {
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  h1 {
+    margin: 0 0 12px;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.06;
+  }
+
+  .hero p {
+    margin: 0;
+    max-width: 760px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .documents {
+    padding: 26px;
+  }
+
+  .documents h2,
+  .consent h2 {
+    margin: 0 0 8px;
+    font-size: 24px;
+  }
+
+  .subtext {
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .doc-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .doc-card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fcfa 100%);
+  }
+
+  .doc-card h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+  }
+
+  .doc-card p {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .doc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .link-btn,
+  .agree-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.18s ease;
+    cursor: pointer;
+  }
+
+  .link-btn {
+    background: #eaf5f1;
+    color: var(--brand-dark);
+    border: 1px solid #cde4dc;
+  }
+
+  .link-btn:hover,
+  .link-btn:focus-visible {
+    background: #dff0ea;
+  }
+
+  .doc-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .doc-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--brand);
+  }
+
+  .consent {
+    padding: 26px;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+
+  .notice {
+    border-left: 4px solid #d8a11f;
+    background: var(--warn-bg);
+    color: #684400;
+    border-radius: 12px;
+    padding: 14px 15px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  .master-check {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fbfdfc;
+  }
+
+  .master-check input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--brand);
+  }
+
+  .master-check label {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  .master-check strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .agree-btn {
+    width: 100%;
+    margin-top: 16px;
+    border: none;
+    background: var(--brand);
+    color: #fff;
+    font-size: 15px;
+  }
+
+  .agree-btn:hover,
+  .agree-btn:focus-visible {
+    background: var(--brand-dark);
+  }
+
+  .agree-btn:disabled {
+    cursor: not-allowed;
+    background: #b6c6bf;
+  }
+
+  .status {
+    display: none;
+    margin-top: 16px;
+    border-radius: 14px;
+    padding: 14px 15px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .status.visible {
+    display: block;
+  }
+
+  .status.success {
+    background: var(--ok-bg);
+    color: var(--ok);
+    border: 1px solid #bfe2cb;
+  }
+
+  .status.error {
+    background: #fff1f0;
+    color: #9b2c23;
+    border: 1px solid #f1c2bd;
+  }
+
+  .meta {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  code {
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    background: #eef3f1;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .consent {
+      position: static;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">BlueDiesel Malaysia</div>
+      <h1>Legal Documents & Agreement</h1>
+      <p>Review the current BlueDiesel legal documents below. Users must open each document, confirm that they have reviewed it, and then explicitly agree before continuing.</p>
+    </section>
+
+    <section class="layout" aria-label="BlueDiesel legal consent workflow">
+      <div class="panel documents">
+        <h2>Documents to Review</h2>
+        <p class="subtext">These links open the stored legal files from the BlueDiesel documentation folder.</p>
+
+        <div class="doc-list">
+          <article class="doc-card">
+            <h3>Terms and Conditions</h3>
+            <p>Commercial terms, platform usage rules, payments, liability, and misuse restrictions.</p>
+            <div class="doc-actions">
+              <a class="link-btn" href="BlueDiesel_TnC.pdf" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <label class="doc-check">
+                <input type="checkbox" class="doc-ack" data-doc="Terms and Conditions">
+                <span>I have reviewed this document</span>
+              </label>
+            </div>
+          </article>
+
+          <article class="doc-card">
+            <h3>Return and Refund Policy</h3>
+            <p>Explains when sales are final, how partial-dispense refunds work, and how billing issues are handled.</p>
+            <div class="doc-actions">
+              <a class="link-btn" href="BlueDiesel_Return%20and%20Refund%20Policy.pdf" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <label class="doc-check">
+                <input type="checkbox" class="doc-ack" data-doc="Return and Refund Policy">
+                <span>I have reviewed this document</span>
+              </label>
+            </div>
+          </article>
+
+          <article class="doc-card">
+            <h3>Privacy Policy</h3>
+            <p>Covers personal data collection, processing, disclosure, retention, security, and user rights.</p>
+            <div class="doc-actions">
+              <a class="link-btn" href="BlueDiesel_PP.pdf" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <label class="doc-check">
+                <input type="checkbox" class="doc-ack" data-doc="Privacy Policy">
+                <span>I have reviewed this document</span>
+              </label>
+            </div>
+          </article>
+
+          <article class="doc-card">
+            <h3>Background / Company Overview</h3>
+            <p>Provides company background and supporting business context for the BlueDiesel offering.</p>
+            <div class="doc-actions">
+              <a class="link-btn" href="BlueDiesel_bg.pdf" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <label class="doc-check">
+                <input type="checkbox" class="doc-ack" data-doc="Background / Company Overview">
+                <span>I have reviewed this document</span>
+              </label>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <aside class="panel consent">
+        <h2>Consent</h2>
+        <p class="subtext">The confirmation button stays disabled until every document has been acknowledged.</p>
+
+        <div class="notice">
+          This static page records agreement in your current browser only. For production use inside the app or kiosk, send the acceptance event to your backend and store the user ID, version, timestamp, device, and IP address.
+        </div>
+
+        <div class="master-check">
+          <input id="masterAgree" type="checkbox" aria-describedby="masterAgreeHint">
+          <label for="masterAgree">
+            <strong>I agree to all BlueDiesel legal documents.</strong>
+            <span id="masterAgreeHint">By checking this box and clicking confirm, I acknowledge that I reviewed all listed documents and agree to be bound by them.</span>
+          </label>
+        </div>
+
+        <button id="confirmBtn" class="agree-btn" type="button" disabled>Confirm Agreement</button>
+
+        <div id="statusBox" class="status" role="status" aria-live="polite"></div>
+
+        <div class="meta">
+          Local storage key: <code>bluediesel-legal-consent-v1</code><br>
+          Recommended next step: connect this page to an API endpoint that creates an immutable consent record.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const docChecks = Array.from(document.querySelectorAll('.doc-ack'));
+    const masterAgree = document.getElementById('masterAgree');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const statusBox = document.getElementById('statusBox');
+    const storageKey = 'bluediesel-legal-consent-v1';
+
+    function showStatus(message, tone) {
+      statusBox.textContent = message;
+      statusBox.className = 'status visible ' + tone;
+    }
+
+    function allDocumentsAcknowledged() {
+      return docChecks.every((checkbox) => checkbox.checked);
+    }
+
+    function refreshButtonState() {
+      confirmBtn.disabled = !(allDocumentsAcknowledged() && masterAgree.checked);
+    }
+
+    function restoreSavedConsent() {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) {
+          return;
+        }
+
+        const parsed = JSON.parse(saved);
+        if (!parsed || !parsed.acceptedAt) {
+          return;
+        }
+
+        docChecks.forEach((checkbox) => {
+          checkbox.checked = true;
+        });
+        masterAgree.checked = true;
+        refreshButtonState();
+
+        showStatus(
+          'Agreement already recorded in this browser on ' + new Date(parsed.acceptedAt).toLocaleString() + '.',
+          'success'
+        );
+      } catch (error) {
+        showStatus('Unable to restore saved consent state from this browser.', 'error');
+      }
+    }
+
+    docChecks.forEach((checkbox) => {
+      checkbox.addEventListener('change', refreshButtonState);
+    });
+
+    masterAgree.addEventListener('change', refreshButtonState);
+
+    confirmBtn.addEventListener('click', () => {
+      if (!allDocumentsAcknowledged()) {
+        showStatus('Each document must be acknowledged before agreement can be confirmed.', 'error');
+        return;
+      }
+
+      if (!masterAgree.checked) {
+        showStatus('You must check the agreement confirmation box before proceeding.', 'error');
+        return;
+      }
+
+      const payload = {
+        acceptedAt: new Date().toISOString(),
+        documents: docChecks.map((checkbox) => checkbox.dataset.doc),
+        version: '2026-05-29'
+      };
+
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+        showStatus(
+          'Agreement recorded in this browser on ' + new Date(payload.acceptedAt).toLocaleString() + '.',
+          'success'
+        );
+      } catch (error) {
+        showStatus('Agreement could not be saved in this browser. Check storage settings or connect this page to a backend.', 'error');
+      }
+    });
+
+    restoreSavedConsent();
+    refreshButtonState();
+  </script>
+</body>
+</html>

@@ -4,10 +4,10 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
 
-  // Resolve tests from this testing/ folder only
-  rootDir: '.',
+  // rootDir is the workspace root so coverage can reach portable-refill-app/src/
+  rootDir: '..',
   testMatch: [
-    '<rootDir>/**/*.test.ts',
+    '<rootDir>/testing/**/*.test.ts',
   ],
 
   // Transform TypeScript files
@@ -31,26 +31,24 @@ module.exports = {
   // Module name mapper to shim native Expo/RN modules that cannot run in Node.js
   moduleNameMapper: {
     // Expo modules
-    '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
-    '^expo-constants$': '<rootDir>/__mocks__/expo-constants.ts',
-    '^expo-crypto$': '<rootDir>/__mocks__/expo-crypto.ts',
+    '^expo-secure-store$': '<rootDir>/testing/__mocks__/expo-secure-store.ts',
+    '^expo-constants$': '<rootDir>/testing/__mocks__/expo-constants.ts',
+    '^expo-crypto$': '<rootDir>/testing/__mocks__/expo-crypto.ts',
     // React Native AsyncStorage
     '^@react-native-async-storage/async-storage$':
-      '<rootDir>/__mocks__/@react-native-async-storage/async-storage.ts',
+      '<rootDir>/testing/__mocks__/@react-native-async-storage/async-storage.ts',
     // Alias for workspace src paths
-    '^../../portable-refill-app/(.*)$': '<rootDir>/../portable-refill-app/$1',
+    '^../../portable-refill-app/(.*)$': '<rootDir>/portable-refill-app/$1',
   },
-
-  // Setup file for global mocks
-  // setupFilesAfterEach: [],
 
   // Coverage settings
   collectCoverageFrom: [
-    '../portable-refill-app/src/**/*.{ts,tsx}',
-    '!../portable-refill-app/src/**/*.d.ts',
-    '!../portable-refill-app/src/types/**',
+    '<rootDir>/portable-refill-app/src/**/*.{ts,tsx}',
+    '!<rootDir>/portable-refill-app/src/**/*.d.ts',
+    '!<rootDir>/portable-refill-app/src/types/**',
+    '!<rootDir>/portable-refill-app/src/**/*.test.{ts,tsx}',
   ],
-  coverageDirectory: '<rootDir>/coverage',
+  coverageDirectory: '<rootDir>/testing/coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {

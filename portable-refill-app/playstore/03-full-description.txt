@@ -1,0 +1,66 @@
+BlueDiesel Refill Kiosk transforms AdBlue refueling into a seamless, contactless experience. Scan, dispense, and go — all from your smartphone.
+
+🚛 FOR COMMERCIAL VEHICLE OPERATORS
+
+BlueDiesel is designed for fleet managers, truck operators, and commercial vehicle owners who need fast, reliable AdBlue refueling without waiting for attendants or dealing with manual paperwork.
+
+⚡ KEY FEATURES
+
+• QR Code Scanning: Scan the station QR code to unlock the pump instantly
+• Live Dispensing Monitor: Watch real-time volume and cost as you refuel
+• Digital Wallet: Pre-load funds for faster checkout and better budget control
+• Transaction History: Access all receipts and refueling records in one place
+• Station Finder: Locate nearby BlueDiesel stations with live availability
+• Secure Authentication: Your account and wallet are protected with industry-standard encryption
+• Pre-Authorization: Set spending limits for controlled refueling sessions
+
+🔐 SAFE & SECURE
+
+Your payments are processed through secure gateways with full encryption. We never store your payment card details. All transactions are logged with timestamps and station references for complete transparency.
+
+💳 PAYMENT OPTIONS
+
+• Digital wallet top-ups via credit/debit card
+• Pre-authorized dispensing with automatic deductions
+• Instant transaction confirmations
+• Download receipts directly to your device
+
+📍 HOW IT WORKS
+
+1. Register your account with email and password
+2. Find a nearby BlueDiesel refill station
+3. Top up your digital wallet
+4. Scan the station QR code with your camera
+5. Dispense AdBlue and watch the live meter
+6. Transaction completes automatically
+7. Download your receipt instantly
+
+🏭 FOR FLEET MANAGERS
+
+Perfect for managing multiple vehicles:
+• Track all refueling transactions by vehicle
+• Monitor AdBlue usage patterns
+• Export transaction history for expense reports
+• Set spending controls per user
+
+🌍 EXPANDING NETWORK
+
+We're launching in Malaysia with plans to expand across Southeast Asia. Check the app for the latest station locations near you.
+
+📞 CUSTOMER SUPPORT
+
+Need help? Contact our support team:
+• Email: info@bluediesel.com.my
+• Hours: Monday - Friday, 8:30 AM - 5:30 PM; Saturday, 9 AM - 1 PM (MYT)
+
+⚠️ ALPHA VERSION
+
+This is an early access release. Some features like live station data require hardware deployment, which is currently in progress. Your feedback helps us improve!
+
+🔒 PRIVACY FIRST
+
+We collect only essential data to process your transactions. Location is used solely to show nearby stations and is never stored. Read our full privacy policy at the link below.
+
+---
+
+BlueDiesel Refill Kiosk — Fast. Secure. Simple.

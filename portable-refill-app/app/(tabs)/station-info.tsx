@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -252,6 +253,7 @@ export default function StationInfoScreen() {
   }
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <ScrollView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.stationName}>{station.name}</Text>
@@ -462,6 +464,7 @@ export default function StationInfoScreen() {
 
       <View style={{ height: 40 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

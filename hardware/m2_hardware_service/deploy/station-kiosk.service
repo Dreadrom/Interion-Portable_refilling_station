@@ -1,0 +1,51 @@
+# /etc/systemd/system/station-kiosk.service
+#
+# ODROID-M2 refilling station — Chromium kiosk UI.
+# Launches Chromium in full-screen kiosk mode pointing at the local Flask API
+# (localhost:8080) which serves the HTML kiosk UI.
+#
+# Requires: X server running (station-xorg.service) + station-hardware.service
+#
+# Install:
+#   sudo cp station-kiosk.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable station-kiosk
+#   sudo systemctl start station-kiosk
+
+[Unit]
+Description=AceRev Refilling Station Kiosk UI
+After=station-hardware.service station-xorg.service
+Requires=station-hardware.service
+BindsTo=station-xorg.service
+
+[Service]
+Type=simple
+User=station
+Group=station
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/station/.Xauthority
+
+# Wait until the Flask API is ready before opening Chromium
+ExecStartPre=/bin/bash -c 'until curl -sf http://127.0.0.1:8080/health; do sleep 1; done'
+
+ExecStart=/usr/bin/chromium-browser \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-session-crashed-bubble \
+    --disable-restore-session-state \
+    --no-first-run \
+    --disable-pinch \
+    --overscroll-history-navigation=0 \
+    --touch-events=enabled \
+    --disable-features=TranslateUI \
+    --app=http://127.0.0.1:8080
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=station-kiosk
+
+[Install]
+WantedBy=graphical.target

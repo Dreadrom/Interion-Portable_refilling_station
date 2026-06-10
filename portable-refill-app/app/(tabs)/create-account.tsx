@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { useAuthStore } from '../../src/stores/useAuthStore';
 
@@ -10,6 +10,7 @@ export default function CreateAccountScreen() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { register, createOfflineSession, isLoading } = useAuthStore();
 
   const handleContinue = () => {
@@ -35,12 +36,17 @@ export default function CreateAccountScreen() {
       return;
     }
 
+    if (!agreedToTerms) {
+      Alert.alert('Terms Required', 'Please agree to the Terms and Conditions to continue');
+      return;
+    }
+
     try {
       await register({ email, password, name });
       router.replace('/home');
     } catch (error: any) {
-      if (!error.response) {
-        // Backend unreachable — create local account so the demo flow works
+      // Backend unreachable (network error or timeout) — create local account so the demo flow works
+      if (error.code === 'SERVICE_UNAVAILABLE' || error.code === 'GATEWAY_TIMEOUT' || error.code === 'INTERNAL_SERVER_ERROR') {
         await createOfflineSession({ name, email });
         router.replace('/home');
       } else {
@@ -50,8 +56,9 @@ export default function CreateAccountScreen() {
   };
 
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>AceRev Refill Kiosk</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior="padding">
+    <ScrollView contentContainerStyle={[globalStyles.container, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
+      <Text style={globalStyles.title}>BlueDiesel</Text>
       <Text style={globalStyles.subtitle}>Create Account</Text>
 
       {step === 1 && (
@@ -104,6 +111,58 @@ export default function CreateAccountScreen() {
             editable={!isLoading}
           />
 
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 400,
+              alignSelf: 'center',
+              marginTop: 8,
+              marginBottom: 4,
+            }}
+          >
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+                paddingHorizontal: 4,
+              }}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              disabled={isLoading}
+            >
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 4,
+                  borderWidth: 2,
+                  borderColor: agreedToTerms ? '#10B981' : '#CBD5E1',
+                  backgroundColor: agreedToTerms ? '#10B981' : 'white',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  flexShrink: 0,
+                }}
+              >
+                {agreedToTerms && (
+                  <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>✓</Text>
+                )}
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 14, color: '#475569' }}>I agree to the </Text>
+                <Text
+                  style={{ fontSize: 14, color: '#10B981', textDecorationLine: 'underline' }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push('/terms-and-conditions');
+                  }}
+                >
+                  Terms and Conditions
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity 
             style={globalStyles.primaryButton}
             onPress={handleRegister}
@@ -123,6 +182,7 @@ export default function CreateAccountScreen() {
       >
         <Text style={globalStyles.secondaryButtonText}>Cancel</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

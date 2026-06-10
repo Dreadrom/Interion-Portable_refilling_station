@@ -1,0 +1,38 @@
+# /etc/systemd/system/station-hardware.service
+#
+# ODROID-M2 refilling station — hardware gateway daemon.
+# Starts the Python hardware_service (MQTT + GPIO + Flask API) on boot.
+#
+# Install:
+#   sudo cp station-hardware.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable station-hardware
+#   sudo systemctl start station-hardware
+
+[Unit]
+Description=AceRev Refilling Station Hardware Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=station
+Group=station
+WorkingDirectory=/opt/station/hardware_service
+EnvironmentFile=/opt/station/hardware_service/.env
+ExecStart=/opt/station/venv/bin/python main.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=station-hardware
+
+# Give the service access to GPIO and serial devices
+SupplementaryGroups=gpio dialout
+
+# Safety limits
+TimeoutStopSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

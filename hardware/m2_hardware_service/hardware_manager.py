@@ -32,10 +32,11 @@ Background threads:
 import logging
 import threading
 import time
+import queue
 import random
 import string
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, List
 
 from config import M2Config
 from sensors import MK325Pulser, LevelSensor, LimitSwitch
@@ -98,6 +99,10 @@ class HardwareManager:
         self.last_tank_level:    Optional[float] = None
         self.last_limit_tripped: bool            = False
 
+        # SSE subscriber queues (one per connected kiosk browser tab)
+        self._sse_queues: List[queue.Queue] = []
+        self._sse_lock   = threading.Lock()
+
         # Background thread handles
         self._heartbeat_thread:    Optional[threading.Thread] = None
         self._sensor_upload_thread: Optional[threading.Thread] = None
@@ -106,6 +111,33 @@ class HardwareManager:
     @property
     def state(self) -> str:
         return self._state.name
+
+    # ── SSE pub/sub ───────────────────────────────────────────────────────────
+
+    def subscribe_sse(self) -> queue.Queue:
+        """Register a new SSE listener; returns the queue to read events from."""
+        q: queue.Queue = queue.Queue(maxsize=64)
+        with self._sse_lock:
+            self._sse_queues.append(q)
+        return q
+
+    def unsubscribe_sse(self, q: queue.Queue) -> None:
+        """Remove an SSE listener queue."""
+        with self._sse_lock:
+            self._sse_queues = [x for x in self._sse_queues if x is not q]
+
+    def _emit_sse(self, event: str, data: dict) -> None:
+        """Push an SSE event to all connected listeners (non-blocking)."""
+        payload = {"event": event, **data}
+        with self._sse_lock:
+            dead = []
+            for q in self._sse_queues:
+                try:
+                    q.put_nowait(payload)
+                except queue.Full:
+                    dead.append(q)   # slow subscriber — drop it
+            for q in dead:
+                self._sse_queues.remove(q)
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -235,6 +267,13 @@ class HardwareManager:
         snap = self.flow_processor.snapshot()
         self.mqtt.publish_flow(snap)
 
+        # Stream to kiosk SSE clients
+        self._emit_sse('flow', {
+            'volumeLitres':   round(snap.volume_litres, 4),
+            'flowRateLPM':    round(snap.flow_rate_lpm, 2),
+            'elapsedSeconds': round(snap.elapsed_seconds, 1),
+        })
+
         # Enforce volume cap
         if self._max_volume > 0 and snap.volume_litres >= self._max_volume:
             logger.info("Volume target reached (%.3fL) — stopping", snap.volume_litres)
@@ -243,12 +282,22 @@ class HardwareManager:
     def _on_plc_fault(self, fault_codes: list) -> None:
         """Called by StationPLC when an interlock trips during dispense."""
         logger.error("PLC faults: %s", fault_codes)
+        self._emit_sse('fault', {'faults': fault_codes})
         self.mqtt.publish_status("FAULT", self._txn_id)
 
     def _on_plc_complete(self, reason: str) -> None:
         """Called by StationPLC when the dispense sequence fully completes."""
-        final = self.flow_processor.end_transaction()
+        final  = self.flow_processor.end_transaction()
         amount = round(final.volume_litres * UNIT_PRICE_PER_LITRE, 2)
+
+        self._emit_sse('complete', {
+            'flow': {
+                'volumeLitres':   round(final.volume_litres, 4),
+                'elapsedSeconds': round(final.elapsed_seconds, 1),
+                'flowRateLPM':    round(final.flow_rate_lpm, 2),
+            },
+            'plc': {'stopReason': reason},
+        })
 
         self.mqtt.publish_complete(
             txn_id=self._txn_id or "",

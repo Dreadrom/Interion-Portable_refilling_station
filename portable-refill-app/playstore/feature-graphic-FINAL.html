@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BlueDiesel Feature Graphic - 1024x500</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1024px;
+    height: 500px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0a1628 0%, #0d2144 50%, #0a3060 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px;
+    position: relative;
+  }
+  
+  /* Decorative elements */
+  body::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(77,166,255,0.15) 0%, transparent 70%);
+    right: -200px;
+    top: -100px;
+    border-radius: 50%;
+  }
+  
+  .left {
+    z-index: 10;
+    max-width: 550px;
+  }
+  
+  .logo-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  
+  .logo-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #4da6ff, #1a6fd4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 900;
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(77,166,255,0.5);
+  }
+  
+  .brand-name {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  
+  .brand-name .ace {
+    color: #4da6ff;
+  }
+  
+  .tagline {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  
+  .subtitle {
+    font-size: 22px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 400;
+    line-height: 1.4;
+  }
+  
+  .features {
+    display: flex;
+    gap: 32px;
+    margin-top: 28px;
+  }
+  
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #4da6ff;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .feature-icon {
+    font-size: 24px;
+  }
+  
+  .right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  
+  .phone-mockup {
+    width: 200px;
+    height: 400px;
+    background: #1a1a1a;
+    border-radius: 30px;
+    padding: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    position: relative;
+    border: 3px solid #333;
+  }
+  
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #082E44 0%, #0a1628 100%);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  .qr-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(77,166,255,0.2);
+    border: 3px solid #4da6ff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+  }
+  
+  .screen-text {
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+  }
+  
+  .button-demo {
+    background: #4da6ff;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="logo-section">
+      <div class="logo-circle">A</div>
+      <div class="brand-name"><span class="ace">Ace</span>Rev</div>
+    </div>
+    
+    <div class="tagline">
+      Fast AdBlue<br>Refueling
+    </div>
+    
+    <div class="subtitle">
+      Scan. Dispense. Go. Self-service refilling made simple.
+    </div>
+    
+    <div class="features">
+      <div class="feature-item">
+        <span class="feature-icon">📱</span>
+        <span>QR Scan</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">💳</span>
+        <span>Wallet</span>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">📊</span>
+        <span>Live Tracking</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="right">
+    <div class="phone-mockup">
+      <div class="phone-screen">
+        <div class="qr-icon">⚡</div>
+        <div class="screen-text">
+          Scan to Start<br>Dispensing
+        </div>
+        <div class="button-demo">
+          UNLOCK PUMP
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

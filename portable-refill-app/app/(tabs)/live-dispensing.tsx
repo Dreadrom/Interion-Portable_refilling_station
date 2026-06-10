@@ -47,6 +47,7 @@ export default function LiveDispensingScreen() {
   const volumeRef = useRef(0);
   const amountRef = useRef(0);
   const elapsedRef = useRef(0);
+  const dispensingStartTimeRef = useRef<number>(Date.now());
 
   const stationId = params.stationId as string;
   const product = params.product as ProductType;
@@ -199,6 +200,7 @@ export default function LiveDispensingScreen() {
   };
 
   const simulateDispensing = () => {
+    dispensingStartTimeRef.current = Date.now();
     const targetVolume = presetType === 'VOLUME' ? presetValue : presetValue / unitPrice;
     const dispensingRate = 0.08; // 0.08 litres per interval (realistic pump rate)
     const interval = 100; // ms
@@ -335,8 +337,14 @@ export default function LiveDispensingScreen() {
     }
 
     // Persist transaction to history
+    const approvalCode = (backendTxnId ?? Math.random().toString(36).substring(2, 8)).slice(-8).toUpperCase();
+    const paymentRef = `WLT-${Date.now().toString(36).toUpperCase()}`;
     const transactionId = await transactionStore.storeTransaction({
+      dispensingStartTime: dispensingStartTimeRef.current,
       stationName: station?.name || 'Station',
+      stationId: stationId,
+      stationAddress: station?.location?.address || '',
+      stationPhone: '',  // not in StationDetail — can be populated when backend provides it
       product: product,
       nozzle: nozzle,
       volumeDispensed: actualVolume,
@@ -347,6 +355,9 @@ export default function LiveDispensingScreen() {
       holdAmount: holdAmount,
       elapsedTime: formatTime(actualElapsed),
       stopReason: reason,
+      terminalId: `BLUEDIESEL-${stationId.toUpperCase()}`,
+      approvalCode,
+      paymentRef,
     });
 
     // Navigate with transaction ID and refund info

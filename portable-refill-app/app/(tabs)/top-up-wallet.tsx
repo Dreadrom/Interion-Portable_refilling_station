@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { globalStyles } from '../../src/styles/globalStyles';
 import { useAuthStore } from '../../src/stores/useAuthStore';
+import { createPayment } from '../../src/api/payments';
 
 const PRESET_AMOUNTS = [10, 20, 50, 100, 200, 500];
 
@@ -22,10 +23,65 @@ type PaymentMethod = {
   shortLabel: string;
   color: string;
   bg: string;
+  channel: string; // Fiuu channel code
+  method: 'FIUU_FPX' | 'FIUU_EWALLET' | 'FIUU_QR';
 };
 
 const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'tng',  label: "Touch 'n Go eWallet", shortLabel: 'TnG', color: '#0156CC', bg: '#DBEAFE' },
+  { 
+    id: 'fpx', 
+    label: "FPX Online Banking", 
+    shortLabel: 'FPX', 
+    color: '#0156CC', 
+    bg: '#DBEAFE',
+    channel: 'fpx',
+    method: 'FIUU_FPX'
+  },
+  { 
+    id: 'duitnow', 
+    label: "DuitNow QR", 
+    shortLabel: 'QR', 
+    color: '#DC2626', 
+    bg: '#FEE2E2',
+    channel: 'RPP_DuitNowQR',
+    method: 'FIUU_QR'
+  },
+  { 
+    id: 'tng', 
+    label: "Touch 'n Go eWallet", 
+    shortLabel: 'TnG', 
+    color: '#0156CC', 
+    bg: '#DBEAFE',
+    channel: 'TNG-EWALLET',
+    method: 'FIUU_EWALLET'
+  },
+  { 
+    id: 'boost', 
+    label: "Boost", 
+    shortLabel: 'Boost', 
+    color: '#F97316', 
+    bg: '#FFEDD5',
+    channel: 'BOOST',
+    method: 'FIUU_EWALLET'
+  },
+  { 
+    id: 'grabpay', 
+    label: "GrabPay", 
+    shortLabel: 'Grab', 
+    color: '#10B981', 
+    bg: '#D1FAE5',
+    channel: 'GrabPay',
+    method: 'FIUU_EWALLET'
+  },
+  { 
+    id: 'shopeepay', 
+    label: "ShopeePay", 
+    shortLabel: 'Shopee', 
+    color: '#F97316', 
+    bg: '#FFEDD5',
+    channel: 'ShopeePay',
+    method: 'FIUU_EWALLET'
+  },
 ];
 
 export default function TopUpWalletScreen() {
@@ -78,20 +134,46 @@ export default function TopUpWalletScreen() {
       return;
     }
 
-    const method = PAYMENT_METHODS.find(m => m.id === selectedMethod);
-
     setProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await topUpBalance(amount);
-      const newBalance = currentBalance + amount;
-      Alert.alert(
-        'Top-Up Successful!',
-        `${currency} ${amount.toFixed(2)} added via ${method?.label}.\n\nNew Balance: ${currency} ${newBalance.toFixed(2)}`,
-        [{ text: 'Done', onPress: () => router.back() }]
-      );
+      // Get selected payment method details
+      const method = PAYMENT_METHODS.find(m => m.id === selectedMethod);
+      if (!method) {
+        Alert.alert('Error', 'Invalid payment method selected');
+        return;
+      }
+
+      // Create payment with Fiuu
+      const { payment } = await createPayment({
+        stationId: '', // Empty for wallet top-up
+        amount: amount,
+        currency: currency,
+        method: method.method,
+        channel: method.channel,
+        description: 'Wallet Top-Up',
+        metadata: {
+          product: 'Wallet Credit',
+          channel: method.channel,
+        },
+      });
+
+      // Navigate to WebView payment screen with Fiuu hosted page
+      if (payment.paymentUrl && payment.paymentData) {
+        router.push({
+          pathname: '/payment-webview',
+          params: {
+            paymentId: payment.id,
+            amount: payment.amount.toString(),
+            currency: payment.currency,
+            paymentUrl: payment.paymentUrl,
+            paymentData: JSON.stringify(payment.paymentData),
+          },
+        });
+      } else {
+        throw new Error('Payment URL not provided by gateway');
+      }
     } catch (error: any) {
-      Alert.alert('Top-Up Failed', error.message || 'An error occurred during top-up.');
+      Alert.alert('Payment Creation Failed', error.message || 'Failed to create payment. Please try again.');
     } finally {
       setProcessing(false);
     }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +33,15 @@ export default function ProfileScreen() {
     transactionStore.getAllTransactions().then((list) => setTxnCount(list.length));
   }, []);
 
+  // Sync form fields when user data changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '');
+      setEmail(user.email ?? '');
+      setPhone(user.phone ?? '');
+    }
+  }, [user]);
+
   const memberSince = user ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : '';
   const walletBalance = user?.walletBalance ?? 0;
   const currency = 'MYR';
@@ -50,13 +60,14 @@ export default function ProfileScreen() {
     setProcessing(true);
 
     try {
-      await updateProfile({ name, email, phone: phone || undefined });
-      if (user) await updateUser({ ...user, name, phone: phone || undefined });
+      const updatedUser = await updateProfile({ name, email, phone: phone || undefined });
+      // Update local store with all returned fields including email
+      await updateUser(updatedUser);
       Alert.alert('Success', 'Your profile has been updated successfully.');
       setIsEditing(false);
     } catch (error: any) {
       // Backend unreachable — persist changes locally so the profile stays up to date
-      if (user) await updateUser({ ...user, name, phone: phone || undefined });
+      if (user) await updateUser({ ...user, name, email, phone: phone || undefined });
       Alert.alert('Profile Updated', 'Changes saved locally.');
       setIsEditing(false);
     } finally {
@@ -73,6 +84,24 @@ export default function ProfileScreen() {
 
   const handleChangePassword = () => {
     router.push('./change-password');
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of this account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
   };
 
   const handleDeleteAccount = () => {
@@ -93,7 +122,17 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top + 24 }]}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, { paddingTop: insets.top }]}>
+      {/* Back Button */}
+      <View style={styles.backButtonRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>Profile</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
@@ -223,25 +262,28 @@ export default function ProfileScreen() {
 
         <View style={styles.actionDivider} />
 
-        <TouchableOpacity style={styles.actionRow} onPress={() => router.push('./home')}>
-          <View style={styles.actionIconBox}>
-            <Ionicons name="home-outline" size={20} color="#10B981" />
+        <TouchableOpacity style={styles.actionRow} onPress={handleSignOut}>
+          <View style={[styles.actionIconBox, styles.signOutIconBox]}>
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           </View>
-          <Text style={styles.actionLabel}>Return to Home</Text>
-          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+          <Text style={[styles.actionLabel, styles.signOutLabel]}>Sign Out</Text>
+          <Ionicons name="chevron-forward" size={18} color="#FCA5A5" />
         </TouchableOpacity>
-      </View>
 
-      {/* Danger Zone */}
-      <View style={[styles.card, styles.dangerCard]}>
-        <TouchableOpacity style={styles.dangerRow} onPress={handleDeleteAccount}>
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          <Text style={styles.dangerLabel}>Delete Account</Text>
+        <View style={styles.actionDivider} />
+
+        <TouchableOpacity style={styles.actionRow} onPress={handleDeleteAccount}>
+          <View style={[styles.actionIconBox, styles.signOutIconBox]}>
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          </View>
+          <Text style={[styles.actionLabel, styles.signOutLabel]}>Delete Account</Text>
+          <Ionicons name="chevron-forward" size={18} color="#FCA5A5" />
         </TouchableOpacity>
       </View>
 
       <View style={{ height: 40 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -253,6 +295,27 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    marginHorizontal: -20,
+    marginBottom: 24,
+  },
+  backButton: {
+    padding: 4,
+  },
+  screenTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
   },
   header: {
     alignItems: 'center',
@@ -367,32 +430,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 14,
   },
+  signOutIconBox: {
+    backgroundColor: '#FEF2F2',
+  },
   actionLabel: {
     flex: 1,
     fontSize: 15,
     color: '#111827',
     fontWeight: '500',
   },
+  signOutLabel: {
+    color: '#EF4444',
+  },
   actionDivider: {
     height: 1,
     backgroundColor: '#F3F4F6',
     marginLeft: 50,
-  },
-  dangerCard: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  dangerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 4,
-  },
-  dangerLabel: {
-    fontSize: 15,
-    color: '#EF4444',
-    fontWeight: '500',
   },
   fieldGroup: {
     marginBottom: 16,

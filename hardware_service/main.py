@@ -20,7 +20,8 @@ import structlog
 from config import cfg
 from display import PumpDisplay
 from local_api import app as flask_app, init_diag_api
-from mqtt_client import MQTTClient
+# Using mock MQTT for testing without AWS IoT Core
+from mqtt_mock import MQTTClient  # Change to 'mqtt_client' for production
 from plc_interface import get_hardware
 from pump_controller import PumpController
 

@@ -1,15 +1,16 @@
 """
 station_plc.py — Main PLC scan loop for the ODROID-M2 refilling station.
 
-Implements a cyclic scan architecture equivalent to a PLC ladder program:
+No solenoid valve in this system.  Flow is controlled entirely by the pump
+relay — the Piusi Suzzarablue AC has a built-in bypass valve, so:
+  Pump ON  = flow through MK325 meter to nozzle
+  Pump OFF = bypass recirculates, flow stops immediately
 
-  SCAN CYCLE (every 100ms):
+SCAN CYCLE (every 100ms):
     1. READ inputs   — limit switch, level sensor, pulser state
     2. EVALUATE interlocks — safety chain check
     3. EVALUATE pump sequencer — timed state transitions + duty cycle
-    4. EVALUATE valve controller — timed state transitions
-    5. EXECUTE dispense logic — act on state machine command
-    6. PUBLISH outputs — telemetry if in DISPENSING state
+    4. EXECUTE dispense logic — act on state machine command
 
 External control (from HardwareManager / MQTT):
     plc.cmd_start(txn_id, max_volume) — begin a dispense
@@ -28,7 +29,7 @@ from enum import Enum, auto
 from typing import Callable, Optional
 
 from .pump_sequence import PumpSequencer, PumpState
-from .valve_control import ValveController
+from .valve_control import ValveController   # no-op pass-through (no solenoid valve)
 from .interlock import InterLockChain, InterLockResult
 
 logger = logging.getLogger(__name__)
@@ -39,8 +40,8 @@ SCAN_INTERVAL_S = 0.1    # 100ms PLC scan cycle
 class PlcState(Enum):
     IDLE        = auto()
     AUTHORISED  = auto()    # command received, waiting to start
-    DISPENSING  = auto()    # pump running, valve open, counting
-    STOPPING    = auto()    # valve closing, pump ramping down
+    DISPENSING  = auto()    # pump running, pulser counting
+    STOPPING    = auto()    # pump ramping down
     FAULT       = auto()    # interlock tripped during dispense
 
 
@@ -120,9 +121,7 @@ class StationPLC:
         """Stop the scan loop and ensure hardware is safe."""
         logger.info("StationPLC stopping")
         self._stop_event.set()
-        self.valve.close()
-        time.sleep(CLOSE_DELAY := 0.2)
-        self.pump.stop("SHUTDOWN")
+        self.pump.stop("SHUTDOWN")   # pump off = flow off (no valve to close)
         if self._scan_thread:
             self._scan_thread.join(timeout=2)
         logger.info("StationPLC stopped")
@@ -171,7 +170,7 @@ class StationPLC:
         return {
             "plcState":         self._plc_state.name,
             "pumpState":        self.pump.state.name,
-            "valveState":       self.valve.state.name,
+            "flowState":        self.valve.state.name,  # mirrors pump (no solenoid valve)
             "txnId":            self._txn_id,
             "runRemainingS":    round(self.pump.run_remaining_s, 0),
             "coolRemainingS":   round(self.pump.cool_remaining_s, 0),
@@ -214,9 +213,13 @@ class StationPLC:
         il = self._evaluate_interlocks()
         self._last_interlock = il
 
-        # ── 3. EVALUATE PLC blocks ────────────────────────────────────────────
+        # ── 3. EVALUATE pump sequencer ────────────────────────────────────────
         self.pump.evaluate()
-        self.valve.evaluate()
+        # sync valve mirror state (no relay — just tracks pump state)
+        if self.pump.is_running:
+            self.valve.open(self.pump)
+        else:
+            self.valve.close()
 
         # ── 4. EXECUTE dispense logic ─────────────────────────────────────────
         with self._state_lock:
@@ -232,7 +235,7 @@ class StationPLC:
             self._exec_stopping()
 
     def _exec_authorised(self, il: InterLockResult) -> None:
-        """AUTHORISED → start pump → open valve → DISPENSING."""
+        """AUTHORISED → start pump → DISPENSING."""
         if not il.permits_dispense:
             logger.warning("Interlocks prevent start: %s", il.fault_names)
             with self._state_lock:
@@ -242,11 +245,9 @@ class StationPLC:
             return
 
         if self.pump.can_start and self.pump.start():
-            time.sleep(0.3)   # brief pause after pump on before opening valve
-            self.valve.open(self.pump)
             with self._state_lock:
                 self._plc_state = PlcState.DISPENSING
-            logger.info("PLC → DISPENSING")
+            logger.info("PLC → DISPENSING (pump relay energised — flow via bypass pump)")
 
     def _exec_dispensing(self, il: InterLockResult) -> None:
         """DISPENSING — monitor interlocks and volume limit."""
@@ -259,18 +260,12 @@ class StationPLC:
         # Volume cap check is handled via the pulse callback → cmd_stop
 
     def _exec_stopping(self) -> None:
-        """STOPPING — close valve, stop pump, wait for both to settle."""
-        # Close valve first
-        if not self.valve.is_closed:
-            self.valve.close()
-            return   # wait next scan for valve to close
-
-        # Valve is closed — now stop pump
+        """STOPPING — stop pump (flow stops immediately via built-in bypass)."""
         if self.pump.is_running:
             self.pump.stop(self._stop_reason or "STOPPING")
-            return   # wait for pump to settle
+            return   # wait for pump state machine to settle
 
-        # Both off — complete
+        # Pump off — complete
         reason = self._stop_reason or "STOP"
         logger.info("Dispense sequence complete (reason=%s)", reason)
         self._fire_complete(reason)
@@ -283,14 +278,12 @@ class StationPLC:
             limit_tripped=self._last_limit_tripped,
             tank_level_pct=self._last_tank_level,
             pump=self.pump,
-            valve=self.valve,
             pulser=self._pulser,
         )
 
     def _emergency_stop(self, reason: str) -> None:
-        """Immediate safe shutdown — valve close then pump off."""
+        """Immediate safe shutdown — pump off (bypass stops flow instantly)."""
         logger.error("EMERGENCY STOP: %s", reason)
-        self.valve.close()
         self.pump.stop(reason)
         with self._state_lock:
             self._stop_reason = reason

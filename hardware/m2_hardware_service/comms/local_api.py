@@ -1,31 +1,35 @@
 """
-local_api.py — Local HTTP diagnostics API (localhost:8080).
+local_api.py — Local HTTP API (localhost:8080).
 
-Mirrors the same endpoint structure as the existing hardware_service/local_api.py
-so the station kiosk UI and any local operator tool can query hardware state
-without going through the cloud.
+Serves the kiosk UI static files at GET / and exposes hardware state
+endpoints so the UI can poll live data.  Bound to 127.0.0.1 only.
 
 Endpoints:
+  GET  /                        — kiosk UI (index.html)
   GET  /health                  — liveness check
   GET  /status                  — full hardware state snapshot
-  GET  /sensors                 — latest sensor readings (level, limit, pulser)
-  POST /simulate/start          — STUB only: simulate valve open + start flow
-  POST /simulate/stop           — STUB only: simulate valve close + stop flow
-  POST /simulate/trip_switch    — STUB only: simulate limit switch triggered
+  GET  /sensors                 — latest sensor readings
+  POST /simulate/start          — STUB only: start simulated flow
+  POST /simulate/stop           — STUB only: stop simulated flow
+  POST /simulate/trip_switch    — STUB only: trip limit switch
   POST /simulate/reset_switch   — STUB only: reset limit switch
-
-Binding: 127.0.0.1 only (never exposed externally).
 """
 
+import json
 import logging
+import os
 from typing import TYPE_CHECKING
 
-from flask import Flask, jsonify, request, abort
+from flask import Flask, Response, jsonify, request, abort, send_from_directory
 
 if TYPE_CHECKING:
     from hardware_manager import HardwareManager
 
 logger = logging.getLogger(__name__)
+
+# Kiosk UI static files live next to this package
+_UI_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "kiosk_ui")
+_UI_DIR = os.path.abspath(_UI_DIR)
 
 
 def create_local_api(manager: "HardwareManager") -> Flask:
@@ -33,8 +37,18 @@ def create_local_api(manager: "HardwareManager") -> Flask:
     Build and return a Flask app with the diagnostics API wired to `manager`.
     Start it with: app.run(host='127.0.0.1', port=cfg.diag_api_port)
     """
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder=None)
     app.config["manager"] = manager
+
+    # ── Kiosk UI static files ──────────────────────────────────────────────
+
+    @app.get("/")
+    def kiosk_root():
+        return send_from_directory(_UI_DIR, "index.html")
+
+    @app.get("/static/<path:filename>")
+    def kiosk_static(filename):
+        return send_from_directory(os.path.join(_UI_DIR, "static"), filename)
 
     # ── Liveness ──────────────────────────────────────────────────────────────
 
@@ -60,7 +74,6 @@ def create_local_api(manager: "HardwareManager") -> Flask:
             },
             "plc":         plc_info,
             "pumpOn":      manager.relay.pump_is_on,
-            "valveOpen":   manager.relay.valve_is_open,
         })
 
     # ── PLC diagnostics ───────────────────────────────────────────────────────
@@ -106,6 +119,37 @@ def create_local_api(manager: "HardwareManager") -> Flask:
         _require_stub(manager)
         manager.limit_switch.set_stub_tripped(False)
         return jsonify({"ok": True, "action": "reset_switch"})
+
+    # ── Server-Sent Events (real-time flow stream for kiosk UI) ─────────────
+    # The kiosk browser connects here with EventSource('/events').
+    # Events pushed: 'flow' (each pulse), 'fault', 'complete'.
+    # Falls back gracefully to polling if this endpoint is unreachable.
+
+    @app.get("/events")
+    def sse_events():
+        q = manager.subscribe_sse()
+
+        def generate():
+            try:
+                while True:
+                    try:
+                        payload = q.get(timeout=25)
+                        event   = payload.pop("event", "message")
+                        yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+                    except Exception:  # queue.Empty or generator closed
+                        yield ": keepalive\n\n"   # prevent proxy timeout
+            finally:
+                manager.unsubscribe_sse(q)
+
+        return Response(
+            generate(),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control":       "no-cache",
+                "X-Accel-Buffering":   "no",   # disable nginx buffering
+                "Access-Control-Allow-Origin": "*",
+            },
+        )
 
     return app
 

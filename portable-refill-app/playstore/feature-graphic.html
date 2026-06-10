@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1024px;
+    height: 500px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0a1628 0%, #0d2144 50%, #0a3060 100%);
+    font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 64px;
+  }
+  .left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .logo-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #4da6ff, #1a6fd4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -2px;
+    box-shadow: 0 8px 24px rgba(77,166,255,0.4);
+  }
+  .brand {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .brand span {
+    color: #4da6ff;
+  }
+  .tagline {
+    font-size: 20px;
+    color: #a8c8f0;
+    margin-bottom: 32px;
+    line-height: 1.4;
+    max-width: 440px;
+  }
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .feat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #cce4ff;
+    font-size: 15px;
+  }
+  .feat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4da6ff;
+    flex-shrink: 0;
+  }
+  .right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    opacity: 0.92;
+  }
+  .phone {
+    width: 180px;
+    height: 320px;
+    border-radius: 28px;
+    background: #0d1f38;
+    border: 3px solid rgba(77,166,255,0.5);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(77,166,255,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-top {
+    background: #111e30;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid rgba(77,166,255,0.2);
+  }
+  .phone-status {
+    font-size: 8px;
+    color: #4da6ff;
+    text-align: center;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .phone-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+  }
+  .phone-body {
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pump-card {
+    background: rgba(77,166,255,0.12);
+    border: 1px solid rgba(77,166,255,0.3);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .pump-label { font-size: 8px; color: #7ab3e0; margin-bottom: 4px; }
+  .pump-val { font-size: 20px; font-weight: 800; color: #4da6ff; }
+  .pump-unit { font-size: 9px; color: #7ab3e0; }
+  .pump-bar-bg { height: 4px; background: rgba(77,166,255,0.15); border-radius: 2px; margin-top: 6px; }
+  .pump-bar { height: 4px; width: 65%; background: linear-gradient(90deg,#4da6ff,#1a6fd4); border-radius: 2px; }
+  .cost-row { display: flex; justify-content: space-between; }
+  .cost-item { text-align: center; }
+  .cost-label { font-size: 7px; color: #7ab3e0; }
+  .cost-val { font-size: 11px; font-weight: 700; color: #fff; }
+  .stop-btn {
+    background: linear-gradient(135deg, #e63946, #c1121f);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .badge {
+    background: rgba(77,166,255,0.15);
+    border: 1px solid rgba(77,166,255,0.4);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #4da6ff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="logo-row">
+      <div class="logo-circle">A</div>
+      <div class="brand">Ace<span>Rev</span> Refill</div>
+    </div>
+    <div class="tagline">Portable fuel &amp; AdBlue dispensing.<br>Scan, pay, and pump — no queues.</div>
+    <div class="features">
+      <div class="feat"><div class="feat-dot"></div>Scan QR to connect to any BlueDiesel station</div>
+      <div class="feat"><div class="feat-dot"></div>Pre-authorise and set your fill limit</div>
+      <div class="feat"><div class="feat-dot"></div>Live volume &amp; cost monitor while pumping</div>
+      <div class="feat"><div class="feat-dot"></div>Digital receipts with full SST breakdown</div>
+      <div class="feat"><div class="feat-dot"></div>BlueDiesel Digital Wallet — top up anytime</div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="phone">
+      <div class="phone-top">
+        <div class="phone-status">● Live Dispensing</div>
+        <div class="phone-title">Shell Buona Vista · Nozzle #2</div>
+      </div>
+      <div class="phone-body">
+        <div class="pump-card">
+          <div class="pump-label">VOLUME DISPENSED</div>
+          <div><span class="pump-val">32.47</span> <span class="pump-unit">L</span></div>
+          <div class="pump-bar-bg"><div class="pump-bar"></div></div>
+        </div>
+        <div class="cost-row">
+          <div class="cost-item">
+            <div class="cost-label">AMOUNT</div>
+            <div class="cost-val">MYR 68.19</div>
+          </div>
+          <div class="cost-item">
+            <div class="cost-label">LIMIT</div>
+            <div class="cost-val">MYR 100</div>
+          </div>
+        </div>
+        <div class="stop-btn">STOP DISPENSING</div>
+      </div>
+    </div>
+    <div class="badge">AdBlue · Petrol · Diesel</div>
+  </div>
+</body>
+</html>
